@@ -1,4 +1,5 @@
 export const ROUTINES = {
+  chase: { label: '05 / chase the moo', title: 'chase the moo', hint: 'Follow one target through short strafes and quick reversals. Spread sets its left/right travel range. Speed controls how fast it moves.' },
   transfer: { label: '04 / Burst transfer', title: 'Burst transfer', hint: 'Targets stay in place. Land four hits to pop one, then aim at another target while the burst continues.' },
   smooth: { label: '01 / Steady stream', title: 'Steady stream', hint: 'Track the moving targets while charging and firing. Each target takes four hits.' },
   reactive: { label: '02 / Direction changes', title: 'Direction changes', hint: 'Track targets as they move back and forth. Follow each change of direction. Each target takes four hits.' },

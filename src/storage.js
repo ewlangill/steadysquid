@@ -1,4 +1,4 @@
-import { WEAPONS } from './weapons.js?v=29fe4a5884b4ba6a';
+import { WEAPONS } from './weapons.js?v=4770694482d83370';
 export const MODEL_VERSION = '2026-10-16-arc-2';
 const SETTINGS_KEY = 'steadysquid.settings.v1', HISTORY_KEY = 'steadysquid.history.v1';
 export const HISTORY_LIMIT = 50;
@@ -7,7 +7,7 @@ const number = (v, fallback, min, max, step = 0.1) => typeof v === 'number' && N
 export function cleanSettings(raw = {}) {
   const s = raw && typeof raw === 'object' ? raw : {}, d = DEFAULT_SETTINGS;
   return { weapon: Object.hasOwn(WEAPONS, s.weapon) ? s.weapon : d.weapon,
-    routine: ['smooth', 'reactive', 'acquire', 'transfer'].includes(s.routine) ? s.routine : d.routine,
+    routine: ['smooth', 'reactive', 'acquire', 'transfer', 'chase'].includes(s.routine) ? s.routine : d.routine,
     seed: number(s.seed, d.seed, 1, 9999, 1), arcDegrees: number(s.arcDegrees, d.arcDegrees, 20, 180, 5), size: number(s.size, d.size, 0.6, 1.6), speed: number(s.speed, d.speed, 0.4, 2), sensitivity: number(s.sensitivity, d.sensitivity, 0.2, 2), gyroGain: number(s.gyroGain, d.gyroGain, 0.2, 4),
     yawAxis: ['y', 'z'].includes(s.yawAxis) ? s.yawAxis : d.yawAxis,
     ...Object.fromEntries(['invertX', 'invertY', 'freshLayout'].map(k => [k, typeof s[k] === 'boolean' ? s[k] : d[k]])) };

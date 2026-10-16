@@ -1,12 +1,13 @@
-import { createLocalStore, cleanSettings, MODEL_VERSION } from './storage.js?v=29fe4a5884b4ba6a';
-import { WEAPONS, routineHint } from './weapons.js?v=29fe4a5884b4ba6a';
-import { InkCloud, shotSpread, spreadDirection } from './ink.js?v=29fe4a5884b4ba6a';
-import { generateLayout, targetPosition } from './layout.js?v=29fe4a5884b4ba6a';
-import { freshSeed } from './random.js?v=29fe4a5884b4ba6a';
-import { TargetField, HEAVY } from './targets.js?v=29fe4a5884b4ba6a';
-import { ROUTINES, drillTarget, Acquisition, targetCue } from './drills.js?v=29fe4a5884b4ba6a';
-import { ProGCC, MotionInput, controllerSessionAction } from './progcc.js?v=29fe4a5884b4ba6a';
-import { Session, summarizeFrames } from './engine.js?v=29fe4a5884b4ba6a';
+import { createLocalStore, cleanSettings, MODEL_VERSION } from './storage.js?v=4770694482d83370';
+import { WEAPONS, routineHint } from './weapons.js?v=4770694482d83370';
+import { InkCloud, shotSpread, spreadDirection } from './ink.js?v=4770694482d83370';
+import { generateLayout, targetPosition } from './layout.js?v=4770694482d83370';
+import { createChasePath, chasePosition, targetEnabled } from './chase.js?v=4770694482d83370';
+import { freshSeed } from './random.js?v=4770694482d83370';
+import { TargetField, HEAVY } from './targets.js?v=4770694482d83370';
+import { ROUTINES, drillTarget, Acquisition, targetCue } from './drills.js?v=4770694482d83370';
+import { ProGCC, MotionInput, controllerSessionAction } from './progcc.js?v=4770694482d83370';
+import { Session, summarizeFrames } from './engine.js?v=4770694482d83370';
 const $ = id => document.getElementById(id);
 const session = new Session();
 let weaponProfile = WEAPONS.heavy, runSaved = false, runInput = 'mouse-keyboard';
@@ -18,7 +19,7 @@ let radius = 0.32, routine = 'smooth', seed = 1, arcDegrees = 120;
 const acquisition = new Acquisition(), field = new TargetField(5), targetMeshes = [], THREE = window.THREE;
 let simulationFrame = 0, simulationRemainder = 0, shotSerial = 0, burstShot = 0;
 const ink = new InkCloud();
-let layout = generateLayout(seed, field.count, radius, arcDegrees), inkMesh, splashMesh;
+let layout = generateLayout(seed, field.count, radius, arcDegrees), chasePath = createChasePath(seed, arcDegrees), inkMesh, splashMesh;
 function showError(message) { $('error').hidden = false; $('error').textContent = message; $('start').disabled = true; }
 try {
   if (!THREE) throw new Error('The 3D library could not load. Please reload the page.');
@@ -130,6 +131,7 @@ function resetRoutine() {
   $('welcome').hidden = false; $('routine-chip').textContent = ROUTINES[routine].label.toUpperCase();
   $('routine-title').textContent = ROUTINES[routine].title; $('routine-hint').textContent = routineHint(routine, weaponProfile); $('routine-description').textContent = routineHint(routine, weaponProfile); $('welcome-title').textContent = ROUTINES[routine].title; $('welcome-description').textContent = routineHint(routine, weaponProfile);
   $('acquisition-result').hidden = routine !== 'acquire';
+  $('spread-hint').textContent = routine === 'chase' ? 'Spread sets the single target’s left/right travel range, from 20° to 180°. Wide settings require turning to follow it. Changing spread resets the round.' : 'Spread targets across 20°–180°. At 180°, the outer targets are 90° left and right. Turn to reach them. Changing spread resets the round.';
   if (document.pointerLockElement === canvas) document.exitPointerLock();
   syncUI();
 }
@@ -199,7 +201,7 @@ function drawChargeRing() {
   $('ring-label').textContent = firing ? 'BURST' : amount >= 1 ? 'FULL CHARGE' : amount >= 0.5 ? 'SECOND CHARGE' : 'CHARGING';
 }
 const aimDirection = THREE ? new THREE.Vector3() : null, targetDirection = THREE ? new THREE.Vector3() : null;
-function resetInkAndLayout() { ink.reset(); shotSerial = burstShot = 0; layout = generateLayout(seed, field.count, radius, arcDegrees); }
+function resetInkAndLayout() { ink.reset(); shotSerial = burstShot = 0; layout = generateLayout(seed, field.count, radius, arcDegrees); chasePath = createChasePath(seed, arcDegrees); }
 const particle = THREE ? new THREE.Object3D() : null, particleForward = THREE ? new THREE.Vector3(0, 0, 1) : null;
 const inkForward = THREE ? new THREE.Vector3() : null, inkRight = THREE ? new THREE.Vector3() : null, inkUp = THREE ? new THREE.Vector3() : null;
 function emitInk() {
@@ -238,9 +240,10 @@ function activeTarget() {
 function placeTargets() {
   const active = activeTarget(), cue = targetCue(motionTime, speed);
   targetMeshes.forEach((item, i) => {
+    if (!targetEnabled(routine, i)) { item.mesh.visible = item.ring.visible = item.mark.visible = item.glow.visible = item.countdown.visible = false; item.label.hidden = true; return; }
     const state = field.targets[i], pos = drillTarget(routine, motionTime, speed, seed + i * 17);
     const base = layout[i];
-    const position = targetPosition(base, pos);
+    const position = routine === 'chase' ? chasePosition(chasePath, motionTime, speed) : targetPosition(base, pos);
     item.mesh.position.set(position.x, position.y, position.z);
     item.ring.position.copy(item.mesh.position); item.ring.quaternion.copy(camera.quaternion);
     item.mark.position.x = item.mesh.position.x; item.mark.position.z = item.mesh.position.z;
@@ -268,7 +271,7 @@ function placeTargets() {
 function pickTarget() {
   camera.getWorldDirection(aimDirection); let index = -1, nearest = Infinity, error = Infinity;
   targetMeshes.forEach((item, i) => {
-    if (field.targets[i].hp <= 0) return;
+    if (!targetEnabled(routine, i) || field.targets[i].hp <= 0) return;
     targetDirection.copy(item.mesh.position).sub(camera.position);
     const distance = targetDirection.length(), angle = aimDirection.angleTo(targetDirection);
     error = Math.min(error, angle * 180 / Math.PI);
@@ -298,11 +301,11 @@ function frame(now) {
   else simulationRemainder = 0;
   while (simulationRemainder >= 1 / 60 - 1e-9 && session.state === 'running') {
     simulationRemainder = Math.max(0, simulationRemainder - 1 / 60); simulationFrame++;
-    motionTime = Math.min(session.elapsed, 60 - 1e-8); field.tick(simulationFrame); placeTargets();
+    motionTime = Math.min(session.elapsed, 60 - 1e-8); field.tick(simulationFrame, routine === 'chase' ? 18 : 90); placeTargets();
     const aim = pickTarget(); const previousShots = session.shots, previousElapsed = session.elapsed;
     session.step(1 / 60, aim.index !== -1, aim.error, false);
     if (session.shots > previousShots) emitInk();
-    const colliders = targetMeshes.map((item, i) => ({ position: item.mesh.position.toArray(), alive: field.targets[i].hp > 0 }));
+    const colliders = targetMeshes.map((item, i) => ({ position: item.mesh.position.toArray(), alive: targetEnabled(routine, i) && field.targets[i].hp > 0 }));
     for (const impact of ink.step(colliders, radius)) {
       if (impact.index >= 0 && field.targets[impact.index].hp > 0) { session.hits++; field.hit(impact.index, simulationFrame, impact.damage); }
     }

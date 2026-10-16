@@ -8,6 +8,7 @@ export const WEAPONS = Object.freeze({
 });
 export function routineHint(routine, weapon) {
   const hits = weapon.hits === 3 ? 'three' : 'four';
+  if (routine === 'chase') return `Follow the single target through short strafes and quick reversals. Spread sets left/right travel; speed sets pace. Land ${hits} full-damage hits to pop it. It returns shortly after each pop.`;
   if (routine === 'transfer') return `Targets stay in place. Land ${hits} hits to pop one, then aim at another target while firing.`;
   if (routine === 'reactive') return `Track targets as they move back and forth. Follow each change of direction. Each target takes ${hits} full-damage hits.`;
   if (routine === 'acquire') return 'Aim at the target with the blue outline for at least 0.2 seconds. The selected target changes every four seconds at 1× speed. All targets can be hit.';

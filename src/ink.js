@@ -1,4 +1,4 @@
-import { random01 } from './random.js?v=29fe4a5884b4ba6a';
+import { random01 } from './random.js?v=4770694482d83370';
 // Original approximation informed by each preset's spread limits; game RNG/bias is not reproduced.
 export function shotSpread(seed, serial, burstShot = serial, profile = { yaw: 3.3, pitch: 1.6, speedRandom: 0.12 }) {
   const n = serial * 4, wide = random01(seed, n) < Math.min(0.3, 0.1 + burstShot * 0.02);

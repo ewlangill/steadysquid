@@ -36,3 +36,9 @@ Additional research found a first-person community parameter-analysis table repo
 
 [^nzap]: [Pinned N-ZAP extraction](https://github.com/Leanny/splat3/blob/7280ff9cde8bb1c5dcef46c700c326471584d2e6/data/parameter/1130/weapon/WeaponShooterQuickMiddle.game__GameParameterTable.json). The [N-ZAP parameter display](https://sendou.ink/params/n-zap-85) identifies this five-frame, 30-damage, 4.75-degree profile; it credits the same Lean data, so it is not an independent extraction.
 [^default-notes]: [XarrotD's parameter research notes](https://splatoonwiki.org/wiki/User:XarrotD/paramtable#Shooters), author-maintained community analysis with explicitly tentative interpretations. No code or tables were copied.
+
+## chase the moo — October 16, 2026
+
+Original single-target training path, inspired by the community description of sub strafing as a technique to “change directions fast when swimming in the ink.”[^substrafe] This reference is community-authored and lower-trust than inspected game parameters. The trainer does not reproduce extracted player acceleration, swim form, gear modifiers or exact sub-strafe physics. Seeded waypoint distances, 12% acceleration/deceleration ramps, 1.05 rad/s angular speed ceiling at 1x, small height/depth changes and 18-frame target respawn are original practice settings. Spread controls yaw limits; wider travel gets longer legs to preserve the speed bound. Movement samples depend on simulation time rather than display refresh.
+
+[^substrafe]: [Inkipedia Community Glossary — Sub strafing](https://splatoonwiki.org/wiki/Community_Glossary#Sub_strafing), inspected October 16, 2026. Movement background also checked against [Mobility](https://splatoonwiki.org/wiki/Mobility). No game-physics validation is claimed.
