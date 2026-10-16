@@ -1,4 +1,4 @@
-import { random01 } from './random.js';
+import { random01 } from './random.js?v=98ca43af8df8e2a9';
 export function generateLayout(seed, count = 5, radius = 0.32) {
   const points = [];
   for (let attempt = 0; attempt < 512 && points.length < count; attempt++) {
