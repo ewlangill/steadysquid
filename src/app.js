@@ -1,12 +1,12 @@
-import { createLocalStore, cleanSettings, MODEL_VERSION } from './storage.js?v=55f0171f7aa1aa9e';
-import { WEAPONS, routineHint } from './weapons.js?v=55f0171f7aa1aa9e';
-import { InkCloud, shotSpread, spreadDirection } from './ink.js?v=55f0171f7aa1aa9e';
-import { generateLayout, targetPosition } from './layout.js?v=55f0171f7aa1aa9e';
-import { freshSeed } from './random.js?v=55f0171f7aa1aa9e';
-import { TargetField, HEAVY } from './targets.js?v=55f0171f7aa1aa9e';
-import { ROUTINES, drillTarget, Acquisition, targetCue } from './drills.js?v=55f0171f7aa1aa9e';
-import { ProGCC, MotionInput, controllerSessionAction } from './progcc.js?v=55f0171f7aa1aa9e';
-import { Session, summarizeFrames } from './engine.js?v=55f0171f7aa1aa9e';
+import { createLocalStore, cleanSettings, MODEL_VERSION } from './storage.js?v=2d63c6c93b3fd0e2';
+import { WEAPONS, routineHint } from './weapons.js?v=2d63c6c93b3fd0e2';
+import { InkCloud, shotSpread, spreadDirection } from './ink.js?v=2d63c6c93b3fd0e2';
+import { generateLayout, targetPosition } from './layout.js?v=2d63c6c93b3fd0e2';
+import { freshSeed } from './random.js?v=2d63c6c93b3fd0e2';
+import { TargetField, HEAVY } from './targets.js?v=2d63c6c93b3fd0e2';
+import { ROUTINES, drillTarget, Acquisition, targetCue } from './drills.js?v=2d63c6c93b3fd0e2';
+import { ProGCC, MotionInput, controllerSessionAction } from './progcc.js?v=2d63c6c93b3fd0e2';
+import { Session, summarizeFrames } from './engine.js?v=2d63c6c93b3fd0e2';
 const $ = id => document.getElementById(id);
 const session = new Session();
 let weaponProfile = WEAPONS.heavy, runSaved = false, runInput = 'mouse-keyboard';
@@ -58,7 +58,8 @@ try {
 } catch (error) { showError(error.message); }
 function updateAim() { if (camera) { camera.rotation.y = yaw; camera.rotation.x = pitch; } }
 function center() { yaw = pitch = 0; updateAim(); }
-function start({ replay = false } = {}) { runSaved = false; runInput = usb.device ? 'progcc' : 'mouse-keyboard'; if (!replay && $('fresh-layout').checked) seed = freshSeed(seed); $('seed').value = seed; resetInkAndLayout(); session.start(); acquisition.reset(); field.reset(); simulationFrame = 0; simulationRemainder = 0; motionTime = 0; center(); frameSamples.length = 0; $('welcome').hidden = true; $('pause').disabled = false; canvas.focus(); try { const result = usb.device ? null : canvas.requestPointerLock?.(); result?.catch?.(() => {}); } catch {} syncUI(); }
+function resetEndCard() { $('round-results').hidden = true; $('welcome').classList.remove('results'); $('welcome-label').textContent = 'PRACTICE'; }
+function start({ replay = false } = {}) { resetEndCard(); runSaved = false; runInput = usb.device ? 'progcc' : 'mouse-keyboard'; if (!replay && $('fresh-layout').checked) seed = freshSeed(seed); $('seed').value = seed; resetInkAndLayout(); session.start(); acquisition.reset(); field.reset(); simulationFrame = 0; simulationRemainder = 0; motionTime = 0; center(); frameSamples.length = 0; $('welcome').hidden = true; $('pause').disabled = false; canvas.focus(); try { const result = usb.device ? null : canvas.requestPointerLock?.(); result?.catch?.(() => {}); } catch {} syncUI(); }
 function pause() {
   if (session.state === 'running') { session.pause(); keys.clear(); if (document.pointerLockElement === canvas) document.exitPointerLock(); }
   else if (session.state === 'paused') { session.resume(); canvas.focus(); }
@@ -124,6 +125,7 @@ $('connect').addEventListener('click', async () => {
 });
 $('gyro-gain').addEventListener('input', event => { gyroGain = +event.target.value; $('gyro-value').textContent = gyroGain.toFixed(1) + '×'; });
 function resetRoutine() {
+  resetEndCard();
   resetInkAndLayout(); session.reset(); acquisition.reset(); field.reset(); simulationFrame = 0; simulationRemainder = 0; motionTime = 0; keys.clear(); center();
   $('welcome').hidden = false; $('routine-chip').textContent = ROUTINES[routine].label.toUpperCase();
   $('routine-title').textContent = ROUTINES[routine].title; $('routine-hint').textContent = routineHint(routine, weaponProfile); $('routine-description').textContent = routineHint(routine, weaponProfile); $('welcome-title').textContent = ROUTINES[routine].title; $('welcome-description').textContent = routineHint(routine, weaponProfile);
@@ -171,6 +173,14 @@ function syncUI() {
     localStore.addRun({ modelVersion: MODEL_VERSION, complete: true, finishedAt: new Date().toISOString(), settings: currentSettings(), input: runInput,
       metrics: { tracking: session.tracking, firingTracking: session.firingTracking, angularError: session.angularError, shots: session.shots, hits: session.hits, pops: field.pops, acquired: acquisition.times.length, attempts: acquisition.attempts, acquisitionMean: acquisition.mean } });
     renderHistory();
+    $('session-panel').open = true;
+    $('welcome-label').textContent = 'SESSION RESULTS';
+    $('welcome-description').textContent = '60-second test complete.';
+    for (const [destination, source] of Object.entries({ 'result-tracking': 'tracking', 'result-firing': 'firing', 'result-shots': 'shots', 'result-pops': 'pops', 'result-error': 'angular-error', 'result-acquisition': 'acquisition-time' })) $(destination).textContent = $(source).textContent;
+    $('result-acquisition-row').hidden = routine !== 'acquire';
+    $('round-results').hidden = false; $('welcome').classList.add('results'); $('welcome').hidden = false;
+    if (document.pointerLockElement === canvas) document.exitPointerLock();
+    $('start').focus();
   }
   if (!localStore.available) $('storage-status').textContent = 'Browser storage is unavailable. Practice still works; results may not be saved.';
   const stats = summarizeFrames(frameSamples);

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>SteadySquid 0.1</title>
-  <link rel="stylesheet" href="style.css?v=55f0171f7aa1aa9e">
+  <link rel="stylesheet" href="style.css?v=2d63c6c93b3fd0e2">
 </head>
 <body>
   <header><a class="brand" href="./">SteadySquid 0.1</a><span class="input-badge"><i></i> <span id="input-mode">MOUSE PREVIEW</span></span></header>
@@ -16,7 +16,7 @@
         <div class="crosshair" aria-hidden="true"><span></span></div>
         <div id="charge-reticle" class="charge-reticle" role="progressbar" aria-label="Splatling charge" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden><svg viewBox="0 0 100 100" aria-hidden="true"><g transform="rotate(-90 50 50)"><circle class="ring-track" cx="50" cy="50" r="27"/><circle class="ring-track" cx="50" cy="50" r="36"/><circle id="charge-inner" class="ring-fill" cx="50" cy="50" r="27" pathLength="100"/><circle id="charge-outer" class="ring-fill" cx="50" cy="50" r="36" pathLength="100"/></g></svg><span id="ring-label" hidden>CHARGING</span></div>
         <div id="target-state" class="target-state">READY WHEN YOU ARE</div>
-        <div class="welcome" id="welcome"><span class="small-label">PRACTICE</span><h2 id="welcome-title">Steady stream</h2><p id="welcome-description">Track the moving targets while charging and firing. Each target takes four hits.</p><button class="primary" id="start">Start drill <span>↗</span></button></div>
+        <div class="welcome" id="welcome"><span class="small-label" id="welcome-label">PRACTICE</span><h2 id="welcome-title">Steady stream</h2><p id="welcome-description">Track the moving targets while charging and firing. Each target takes four hits.</p><dl id="round-results" class="completion-metrics" aria-label="Completed session results" hidden><div><dt>Time on target</dt><dd id="result-tracking">—</dd></div><div><dt>Tracking while firing</dt><dd id="result-firing">—</dd></div><div><dt>Shots landed</dt><dd id="result-shots">—</dd></div><div><dt>Targets popped</dt><dd id="result-pops">—</dd></div><div><dt>Angular error</dt><dd id="result-error">—</dd></div><div id="result-acquisition-row" hidden><dt>Acquisition</dt><dd id="result-acquisition">—</dd></div></dl><button class="primary" id="start">Start drill <span>↗</span></button></div>
         <div class="charge-hud"><div class="charge-label"><span id="phase">STANDBY</span><span id="charge-number">0%</span></div><div class="charge-track"><div id="charge-fill"></div></div><p id="charge-hint">HOLD SPACE OR LEFT MOUSE TO CHARGE</p></div>
         <div class="frame-hud"><b id="fps">— FPS</b><span id="frametime">Frame monitor warming up</span></div>
         <div id="error" class="error" role="alert" hidden></div>
@@ -31,7 +31,7 @@
           <div id="acquisition-result" class="acquisition-result" hidden><span>Acquisition · 0.2 s steady aim</span><b id="acquisition-time">—</b><small id="acquisition-count">0 / 0 targets acquired</small></div><div class="pop-result"><div><span>Targets popped</span><b id="pops">0</b></div><div><span>Last pop timing</span><b id="pop-time">—</b></div></div><div class="session-buttons"><button id="pause" disabled>Pause</button><button id="restart">New round</button><button id="replay">Replay seed</button></div>
           <p id="scoring-note" class="footnote">Charging time counts toward tracking, but is excluded from tracking while firing.</p>
         </div></details>
-        <section class="panel history"><span class="small-label">RECENT RESULTS</span><p id="storage-status" class="muted compact">Saved in this browser. Last 50 completed rounds.</p><ol id="history-list"></ol><button id="export-settings">Export settings</button><p class="footnote">Compare runs with the same weapon, seed, difficulty, controls and simulation version.</p></section>
+        <details class="panel session-panel history" id="history-panel"><summary class="panel-heading"><span class="small-label">RECENT RESULTS</span><span class="disclosure-icon" aria-hidden="true">⌄</span></summary><div class="session-scroll"><p id="storage-status" class="muted compact">Saved in this browser. Last 50 completed rounds.</p><ol id="history-list"></ol><button id="export-settings">Export settings</button><p class="footnote">Compare runs with the same weapon, seed, difficulty, controls and simulation version.</p></div></details>
         <section class="panel settings"><span class="small-label">WEAPON</span>
           <div hidden><label for="sensitivity">Mouse sensitivity <output id="sens-value">1.0×</output></label><input id="sensitivity" type="range" min="0.2" max="2" step="0.1" value="1"></div>
           <p id="weapon-title" class="generic">HEAVY SPLATLING / 60 HZ</p><p id="weapon-summary" class="muted compact">48 / 72 f charge · 80 / 160 f burst · 4 f per shot. 30 damage per full-damage hit. Visible ink with approximate spread and travel. 30 max damage; falloff is not simulated.</p>
@@ -41,6 +41,6 @@
     <footer><div><kbd>SPACE</kbd> <span id="keyboard-action">charge / release</span> <kbd>Y</kbd> recenter <kbd>ESC</kbd> pause <kbd>← ↑ ↓ →</kbd> aim</div><span>60 FPS TARGET · ProGCC USB PREVIEW</span></footer>
     <details class="sources"><summary>About this prototype & sources</summary><p>Original browser/debug prototype. ProGCC USB input is experimental. Motion response and button layout need checking on your controller; this does not claim exact Splatoon response. Mouse and keyboard remain available.</p><p>Rendered with <a href="vendor/three/LICENSE">Three.js (MIT)</a>. Architecture informed by the official <a href="https://github.com/HandHeldLegend/hhl-gamepad-config">HOJA3 app</a>. Weapon presets use community-extracted version 11.3 parameters; Splattershot cadence/startup are provisional trainer settings; full game physics are not simulated. <a href="docs/SOURCES.md">Research sources</a>.</p></details>
   </main>
-  <script src="vendor/three/three.min.js?v=55f0171f7aa1aa9e"></script><script type="module" src="src/app.js?v=55f0171f7aa1aa9e"></script>
+  <script src="vendor/three/three.min.js?v=2d63c6c93b3fd0e2"></script><script type="module" src="src/app.js?v=2d63c6c93b3fd0e2"></script>
 </body>
 </html>
