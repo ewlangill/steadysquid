@@ -1,3 +1,4 @@
+import { WEAPONS } from './weapons.js';
 export const SESSION_SECONDS = 60;
 export class Splatling {
   constructor() { this.reset(); }
@@ -32,9 +33,13 @@ export class Splatling {
 }
 // Cadence/startup are provisional trainer settings until inherited game defaults are verified.
 export class Shooter {
-  constructor() { this.reset(); }
+  constructor({ repeatFrames = 6, startupFrames = 3 } = {}) {
+    this.repeatFrames = Number.isInteger(repeatFrames) && repeatFrames >= 1 ? repeatFrames : 6;
+    this.startupFrames = Number.isInteger(startupFrames) && startupFrames >= 1 ? startupFrames : 3;
+    this.reset();
+  }
   reset() { this.phase = 'idle'; this.held = false; this.charge = 0; this.remaining = 0; this.fireFrame = 0; this.fraction = 0; this.cooldown = 0; this.startup = 0; }
-  press() { if (this.held) return; this.held = true; this.phase = 'firing'; this.startup = 3; }
+  press() { if (this.held) return; this.held = true; this.phase = 'firing'; this.startup = this.startupFrames; }
   release() { this.held = false; this.phase = 'idle'; this.startup = 0; }
   step(dt) {
     if (!Number.isFinite(dt) || dt <= 0) return { firingSeconds: 0, shots: 0 };
@@ -45,14 +50,14 @@ export class Shooter {
       this.cooldown = Math.max(0, this.cooldown - 1);
       if (!this.held) continue;
       firingFrames++; this.startup = Math.max(0, this.startup - 1);
-      if (!this.startup && !this.cooldown) { shots++; this.fireFrame++; this.cooldown = 6; }
+      if (!this.startup && !this.cooldown) { shots++; this.fireFrame++; this.cooldown = this.repeatFrames; }
     }
     return { shots, firingSeconds: firingFrames / 60 };
   }
 }
 export class Session {
   constructor(weaponId = 'heavy') { this.setWeapon(weaponId); }
-  setWeapon(id) { this.weaponId = id === 'splattershot' ? id : 'heavy'; this.weapon = this.weaponId === 'heavy' ? new Splatling() : new Shooter(); this.reset(); }
+  setWeapon(id) { this.weaponId = Object.hasOwn(WEAPONS, id) ? id : 'heavy'; this.weapon = WEAPONS[this.weaponId].family === 'splatling' ? new Splatling() : new Shooter(WEAPONS[this.weaponId]); this.reset(); }
   reset() { this.elapsed = 0; this.onTarget = 0; this.fireTime = 0; this.fireOnTarget = 0; this.errorSum = 0; this.shots = 0; this.hits = 0; this.state = 'ready'; this.weapon.reset(); }
   start() { this.reset(); this.state = 'running'; }
   pause() { if (this.state === 'running') { this.state = 'paused'; this.weapon.reset(); } }

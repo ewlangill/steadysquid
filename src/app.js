@@ -189,7 +189,7 @@ function emitInk() {
   const spread = shotSpread(seed, shotSerial++, burstShot++, weaponProfile);
   const direction = spreadDirection(inkForward.toArray(), inkRight.toArray(), inkUp.toArray(), spread);
   const origin = camera.position.clone().addScaledVector(inkRight, 0.12).addScaledVector(inkUp, -0.1).addScaledVector(inkForward, 0.25);
-  const speed = (weaponProfile.family === 'shooter' ? 2.266 : 1.05 + Math.min(1, session.weapon.charge * 2) * 1.05) * spread.speed;
+  const speed = (weaponProfile.family === 'shooter' ? weaponProfile.projectileSpeed : 1.05 + Math.min(1, session.weapon.charge * 2) * 1.05) * spread.speed;
   ink.launch(origin.toArray(), direction, speed, weaponProfile.damage);
 }
 function drawInk() {

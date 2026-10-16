@@ -25,3 +25,14 @@ Inspected the same pinned v11.3 extraction's `WeaponShooterNormal` record.[^spla
 Evidence limit: community-extracted data, not an official Nintendo specification; extraction/schema defaults were not independently verified. The record omits `RepeatFrame` and startup, so the preview's 6-frame repeat and 3-frame startup are explicitly provisional, not asserted as sourced timing. Symmetric vertical spread, uniform distribution and render-unit speed are original approximations. Shooter damage currently stays at maximum; extracted reduction frames/minimum damage are not implemented. No wiki or forum timing claim was used as verification. Next: resolve inherited defaults from an inspectable extraction/schema, then revise timing and add a provenance check before treating the preset as verified.
 
 [^splattershot]: [Pinned Splattershot parameter record](https://github.com/Leanny/splat3/blob/7280ff9cde8bb1c5dcef46c700c326471584d2e6/data/parameter/1130/weapon/WeaponShooterNormal.game__GameParameterTable.json).
+
+## N-ZAP '85 preview — October 16, 2026
+
+Pinned v11.3 `WeaponShooterQuickMiddle` explicitly supplies `RepeatFrame: 5`, `DamageParam.ValueMax: 300` (30 HP), `Stand_DegSwerve: 4.75`, and `MoveParam.SpawnSpeed: 2.2`.[^nzap] The record's SHA-256 is `2cb076ebd75165b73dc7a950380838c773b8dd5bb5b85ae70e7204b1dc15f257`. These are community-extracted parameter facts, not Nintendo documentation or a physical test. Four maximum-damage emissions at five-frame spacing span 15 frames; flight/misses can change impact spacing.
+
+The preview uses that explicit cadence/damage/cone limit and a 2.2 scene-unit speed reference. Its three-frame startup remains a provisional trainer setting. Symmetric vertical spread, uniform random distribution and scene units remain approximations; jump/movement effects, bias, falloff and ink consumption are not reproduced. Existing Splattershot timing remains provisional.
+
+Additional research found a first-person community parameter-analysis table reporting a six-frame shooter default, but it contains uncertain interpretations and no independently inspected schema extraction; treat it as lower-trust corroboration only, not verification of the Splattershot startup/defaults.[^default-notes]
+
+[^nzap]: [Pinned N-ZAP extraction](https://github.com/Leanny/splat3/blob/7280ff9cde8bb1c5dcef46c700c326471584d2e6/data/parameter/1130/weapon/WeaponShooterQuickMiddle.game__GameParameterTable.json). The [N-ZAP parameter display](https://sendou.ink/params/n-zap-85) identifies this five-frame, 30-damage, 4.75-degree profile; it credits the same Lean data, so it is not an independent extraction.
+[^default-notes]: [XarrotD's parameter research notes](https://splatoonwiki.org/wiki/User:XarrotD/paramtable#Shooters), author-maintained community analysis with explicitly tentative interpretations. No code or tables were copied.
