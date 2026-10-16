@@ -1,16 +1,28 @@
-import { random01 } from './random.js?v=98ca43af8df8e2a9';
-export function generateLayout(seed, count = 5, radius = 0.32) {
-  const points = [];
-  for (let attempt = 0; attempt < 512 && points.length < count; attempt++) {
-    const depth = 6.5 + random01(seed, attempt * 3) * 5.5;
-    const p = { x: (random01(seed, attempt * 3 + 1) - 0.5) * 0.86 * depth,
-      y: 0.8 + random01(seed, attempt * 3 + 2) * 2.3, z: -depth };
-    const yaw = Math.atan2(p.x, depth), pitch = Math.atan2(p.y - 1.6, depth), angle = Math.asin(radius / depth);
-    if (points.every(q => Math.hypot(yaw - Math.atan2(q.x, -q.z), pitch - Math.atan2(q.y - 1.6, -q.z)) > angle + Math.asin(radius / -q.z) + 0.045)) points.push(p);
+import { random01 } from './random.js?v=eadc32997def60cd';
+export const DEFAULT_ARC_DEGREES = 120;
+export function generateLayout(seed, count = 5, radius = 0.32, arcDegrees = DEFAULT_ARC_DEGREES) {
+  const arc = Math.max(20, Math.min(180, Number.isFinite(arcDegrees) ? arcDegrees : DEFAULT_ARC_DEGREES)) * Math.PI / 180;
+  const points = [], step = count > 1 ? arc / (count - 1) : 0;
+  for (let i = 0; i < count; i++) {
+    let best = null, bestSeparation = -Infinity;
+    for (let attempt = 0; attempt < 128; attempt++) {
+      const n = i * 512 + attempt * 3;
+      const distance = 6.5 + random01(seed, n) * 5.5;
+      const yaw = count === 1 ? 0 : -arc / 2 + i * step + (i === 0 || i === count - 1 ? 0 : (random01(seed, n + 1) - 0.5) * step * 0.36);
+      const y = 0.8 + random01(seed, n + 2) * 2.3;
+      const p = { x: Math.sin(yaw) * distance, y, z: -Math.cos(yaw) * distance, yaw, distance,
+        motionLimit: i === 0 || i === count - 1 ? 0 : step * 0.18 };
+      const pitch = Math.atan2(y - 1.6, distance), angle = Math.asin(radius / distance);
+      const separation = points.length ? Math.min(...points.map(q => Math.hypot(yaw - q.yaw, pitch - Math.atan2(q.y - 1.6, q.distance)) - angle - Math.asin(radius / q.distance))) : Infinity;
+      if (separation > bestSeparation) { best = p; bestSeparation = separation; }
+      if (separation > 0.01) break;
+    }
+    points.push(best);
   }
-  if (points.length !== count) return Array.from({ length: count }, (_, i) => {
-    const depth = 8 + random01(seed, i + 9000) * 3;
-    return { x: (i - (count - 1) / 2) * 0.21 * depth, y: 1.4 + (i % 2) * 0.7, z: -depth };
-  });
   return points;
+}
+export function targetPosition(base, motion) {
+  const offset = Math.max(-base.motionLimit, Math.min(base.motionLimit, Math.atan2(motion.x * 0.18, base.distance)));
+  const yaw = base.yaw + offset;
+  return { x: Math.sin(yaw) * base.distance, y: base.y + (motion.y - 1.6) * 0.5, z: -Math.cos(yaw) * base.distance };
 }

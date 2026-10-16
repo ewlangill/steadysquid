@@ -1,12 +1,12 @@
-import { createLocalStore, cleanSettings, MODEL_VERSION } from './storage.js?v=98ca43af8df8e2a9';
-import { WEAPONS, routineHint } from './weapons.js?v=98ca43af8df8e2a9';
-import { InkCloud, shotSpread, spreadDirection } from './ink.js?v=98ca43af8df8e2a9';
-import { generateLayout } from './layout.js?v=98ca43af8df8e2a9';
-import { freshSeed } from './random.js?v=98ca43af8df8e2a9';
-import { TargetField, HEAVY } from './targets.js?v=98ca43af8df8e2a9';
-import { ROUTINES, drillTarget, Acquisition } from './drills.js?v=98ca43af8df8e2a9';
-import { ProGCC, MotionInput } from './progcc.js?v=98ca43af8df8e2a9';
-import { Session, summarizeFrames } from './engine.js?v=98ca43af8df8e2a9';
+import { createLocalStore, cleanSettings, MODEL_VERSION } from './storage.js?v=eadc32997def60cd';
+import { WEAPONS, routineHint } from './weapons.js?v=eadc32997def60cd';
+import { InkCloud, shotSpread, spreadDirection } from './ink.js?v=eadc32997def60cd';
+import { generateLayout, targetPosition } from './layout.js?v=eadc32997def60cd';
+import { freshSeed } from './random.js?v=eadc32997def60cd';
+import { TargetField, HEAVY } from './targets.js?v=eadc32997def60cd';
+import { ROUTINES, drillTarget, Acquisition } from './drills.js?v=eadc32997def60cd';
+import { ProGCC, MotionInput } from './progcc.js?v=eadc32997def60cd';
+import { Session, summarizeFrames } from './engine.js?v=eadc32997def60cd';
 const $ = id => document.getElementById(id);
 const session = new Session();
 let weaponProfile = WEAPONS.heavy, runSaved = false, runInput = 'mouse-keyboard';
@@ -14,11 +14,11 @@ const localStore = createLocalStore({ getItem: key => localStorage.getItem(key),
 const canvas = $('range'), keys = new Set(), frameSamples = [];
 let yaw = 0, pitch = 0, sensitivity = 1, speed = 1, motionTime = 0, last = 0, uiAt = 0;
 let renderer, scene, camera, target, halo, floorMark, nextDraw = 0;
-let radius = 0.32, routine = 'smooth', seed = 1;
+let radius = 0.32, routine = 'smooth', seed = 1, arcDegrees = 120;
 const acquisition = new Acquisition(), field = new TargetField(5), targetMeshes = [], THREE = window.THREE;
 let simulationFrame = 0, simulationRemainder = 0, shotSerial = 0, burstShot = 0;
 const ink = new InkCloud();
-let layout = generateLayout(seed, field.count, radius), inkMesh, splashMesh;
+let layout = generateLayout(seed, field.count, radius, arcDegrees), inkMesh, splashMesh;
 function showError(message) { $('error').hidden = false; $('error').textContent = message; $('start').disabled = true; }
 try {
   if (!THREE) throw new Error('The 3D library could not load. Please reload the page.');
@@ -126,6 +126,7 @@ function resetRoutine() {
 $('weapon').addEventListener('change', event => {
   session.setWeapon(event.target.value); weaponProfile = WEAPONS[session.weaponId]; resetRoutine();
 });
+$('target-arc').addEventListener('input', event => { arcDegrees = +event.target.value; $('arc-value').textContent = arcDegrees + '°'; resetRoutine(); });
 $('routine').addEventListener('change', event => { routine = event.target.value; resetRoutine(); });
 $('seed').addEventListener('change', event => { seed = Math.max(1, Math.min(9999, Math.round(+event.target.value) || 1)); event.target.value = seed; resetRoutine(); });
 $('size').addEventListener('input', event => { const factor = +event.target.value; radius = 0.32 * factor; for (const item of targetMeshes) { item.mesh.scale.setScalar(factor); item.ring.scale.setScalar(factor); } $('size-value').textContent = factor.toFixed(1) + '×'; resetRoutine(); });
@@ -180,7 +181,7 @@ function drawChargeRing() {
   $('ring-label').textContent = firing ? 'BURST' : amount >= 1 ? 'FULL CHARGE' : amount >= 0.5 ? 'SECOND CHARGE' : 'CHARGING';
 }
 const aimDirection = THREE ? new THREE.Vector3() : null, targetDirection = THREE ? new THREE.Vector3() : null;
-function resetInkAndLayout() { ink.reset(); shotSerial = burstShot = 0; layout = generateLayout(seed, field.count, radius); }
+function resetInkAndLayout() { ink.reset(); shotSerial = burstShot = 0; layout = generateLayout(seed, field.count, radius, arcDegrees); }
 const particle = THREE ? new THREE.Object3D() : null, particleForward = THREE ? new THREE.Vector3(0, 0, 1) : null;
 const inkForward = THREE ? new THREE.Vector3() : null, inkRight = THREE ? new THREE.Vector3() : null, inkUp = THREE ? new THREE.Vector3() : null;
 function emitInk() {
@@ -221,7 +222,8 @@ function placeTargets() {
   targetMeshes.forEach((item, i) => {
     const state = field.targets[i], pos = drillTarget(routine, motionTime, speed, seed + i * 17);
     const base = layout[i];
-    item.mesh.position.set(base.x + pos.x * 0.18, base.y + (pos.y - 1.6) * 0.5, base.z);
+    const position = targetPosition(base, pos);
+    item.mesh.position.set(position.x, position.y, position.z);
     item.ring.position.copy(item.mesh.position); item.ring.quaternion.copy(camera.quaternion);
     item.mark.position.x = item.mesh.position.x; item.mark.position.z = item.mesh.position.z;
     const alive = state.hp > 0, age = state.poppedAt === null ? 0 : simulationFrame - state.poppedAt;
@@ -296,7 +298,7 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 function currentSettings() {
-  return cleanSettings({ weapon: session.weaponId, routine, seed, size: radius / 0.32, speed, sensitivity, gyroGain, yawAxis: $('yaw-axis').value, invertX: $('invert-x').checked, invertY: $('invert-y').checked, freshLayout: $('fresh-layout').checked });
+  return cleanSettings({ weapon: session.weaponId, routine, seed, arcDegrees, size: radius / 0.32, speed, sensitivity, gyroGain, yawAxis: $('yaw-axis').value, invertX: $('invert-x').checked, invertY: $('invert-y').checked, freshLayout: $('fresh-layout').checked });
 }
 function renderHistory() {
   const list = $('history-list'); list.replaceChildren();
@@ -310,12 +312,13 @@ function renderHistory() {
   }
 }
 const saved = localStore.settings();
-for (const [id, key] of Object.entries({ weapon: 'weapon', routine: 'routine', seed: 'seed', size: 'size', speed: 'speed', sensitivity: 'sensitivity', 'gyro-gain': 'gyroGain', 'yaw-axis': 'yawAxis' })) $(id).value = saved[key];
+for (const [id, key] of Object.entries({ weapon: 'weapon', routine: 'routine', seed: 'seed', size: 'size', 'target-arc': 'arcDegrees', speed: 'speed', sensitivity: 'sensitivity', 'gyro-gain': 'gyroGain', 'yaw-axis': 'yawAxis' })) $(id).value = saved[key];
 for (const [id, key] of Object.entries({ 'invert-x': 'invertX', 'invert-y': 'invertY', 'fresh-layout': 'freshLayout' })) $(id).checked = saved[key];
-session.setWeapon(saved.weapon); weaponProfile = WEAPONS[saved.weapon]; routine = saved.routine; seed = saved.seed; radius = 0.32 * saved.size; speed = saved.speed; sensitivity = saved.sensitivity; gyroGain = saved.gyroGain;
+session.setWeapon(saved.weapon); weaponProfile = WEAPONS[saved.weapon]; routine = saved.routine; seed = saved.seed; arcDegrees = saved.arcDegrees; radius = 0.32 * saved.size; speed = saved.speed; sensitivity = saved.sensitivity; gyroGain = saved.gyroGain;
 for (const item of targetMeshes) item.mesh.scale.setScalar(saved.size);
 for (const [id, value] of Object.entries({ 'size-value': saved.size, 'speed-value': speed, 'sens-value': sensitivity, 'gyro-value': gyroGain })) $(id).textContent = value.toFixed(1) + '×';
-for (const id of ['weapon', 'routine', 'seed', 'size', 'speed', 'sensitivity', 'gyro-gain', 'yaw-axis', 'invert-x', 'invert-y', 'fresh-layout']) {
+$('arc-value').textContent = arcDegrees + '°';
+for (const id of ['weapon', 'routine', 'seed', 'size', 'target-arc', 'speed', 'sensitivity', 'gyro-gain', 'yaw-axis', 'invert-x', 'invert-y', 'fresh-layout']) {
   $(id).addEventListener('change', () => { localStore.saveSettings(currentSettings()); if (!localStore.available) syncUI(); });
 }
 $('export-settings').addEventListener('click', () => {
