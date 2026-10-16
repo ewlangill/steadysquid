@@ -2,7 +2,7 @@ export const ROUTINES = {
   transfer: { label: '04 / Burst transfer', title: 'Burst transfer', hint: 'Targets stay in place. Land four hits to pop one, then aim at another target while the burst continues.' },
   smooth: { label: '01 / Steady stream', title: 'Steady stream', hint: 'Track the moving targets while charging and firing. Each target takes four hits.' },
   reactive: { label: '02 / Direction changes', title: 'Direction changes', hint: 'Track targets as they move back and forth. Follow each change of direction. Each target takes four hits.' },
-  acquire: { label: '03 / Acquire + hold', title: 'Acquire + hold', hint: 'Aim at the target with the blue outline for at least 0.2 seconds. The selected target changes every four seconds at 1× speed. All targets can be hit.' },
+  acquire: { label: '03 / Acquire + hold', title: 'Acquire + hold', hint: 'Aim at the target with the blue outline for at least 0.2 seconds. The ring shrinks until the selected target changes, every four seconds at 1× speed. All targets can be hit.' },
 };
 const random = (seed, index) => {
   let n = (seed ^ Math.imul(index + 1, 0x9e3779b9)) >>> 0;
@@ -36,4 +36,11 @@ export class Acquisition {
     if (!this.acquired && this.dwell >= 0.2 - 1e-9) { this.acquired = true; this.times.push(this.elapsed); }
   }
   get mean() { return this.times.length ? this.times.reduce((a, b) => a + b, 0) / this.times.length : null; }
+}
+
+// Shared clock for target selection and its shrinking countdown ring.
+export function targetCue(time, speed = 1) {
+  const cycles = Math.max(0, time) * speed / 4;
+  const slot = Math.floor(cycles);
+  return { slot, remaining: 1 - (cycles - slot) };
 }

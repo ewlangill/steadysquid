@@ -1,12 +1,12 @@
-import { createLocalStore, cleanSettings, MODEL_VERSION } from './storage.js?v=8b31b167417c27ac';
-import { WEAPONS, routineHint } from './weapons.js?v=8b31b167417c27ac';
-import { InkCloud, shotSpread, spreadDirection } from './ink.js?v=8b31b167417c27ac';
-import { generateLayout, targetPosition } from './layout.js?v=8b31b167417c27ac';
-import { freshSeed } from './random.js?v=8b31b167417c27ac';
-import { TargetField, HEAVY } from './targets.js?v=8b31b167417c27ac';
-import { ROUTINES, drillTarget, Acquisition } from './drills.js?v=8b31b167417c27ac';
-import { ProGCC, MotionInput } from './progcc.js?v=8b31b167417c27ac';
-import { Session, summarizeFrames } from './engine.js?v=8b31b167417c27ac';
+import { createLocalStore, cleanSettings, MODEL_VERSION } from './storage.js?v=55f0171f7aa1aa9e';
+import { WEAPONS, routineHint } from './weapons.js?v=55f0171f7aa1aa9e';
+import { InkCloud, shotSpread, spreadDirection } from './ink.js?v=55f0171f7aa1aa9e';
+import { generateLayout, targetPosition } from './layout.js?v=55f0171f7aa1aa9e';
+import { freshSeed } from './random.js?v=55f0171f7aa1aa9e';
+import { TargetField, HEAVY } from './targets.js?v=55f0171f7aa1aa9e';
+import { ROUTINES, drillTarget, Acquisition, targetCue } from './drills.js?v=55f0171f7aa1aa9e';
+import { ProGCC, MotionInput, controllerSessionAction } from './progcc.js?v=55f0171f7aa1aa9e';
+import { Session, summarizeFrames } from './engine.js?v=55f0171f7aa1aa9e';
 const $ = id => document.getElementById(id);
 const session = new Session();
 let weaponProfile = WEAPONS.heavy, runSaved = false, runInput = 'mouse-keyboard';
@@ -44,7 +44,10 @@ try {
     ring.material.transparent = true; mark.rotation.x = -Math.PI / 2; mark.position.y = 0.015;
     if (i) { scene.add(mesh); scene.add(ring); scene.add(mark); }
     const label = document.createElement('span'); label.className = 'target-health'; $('range').parentElement.append(label);
-    targetMeshes.push({ mesh, ring, mark, label });
+    const glow = new THREE.Mesh(new THREE.TorusGeometry(0.43, 0.07, 8, 64), new THREE.MeshBasicMaterial({ color: 0x90a1cf, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false }));
+    const countdown = new THREE.Mesh(new THREE.TorusGeometry(0.43, 0.022, 8, 64), new THREE.MeshBasicMaterial({ color: 0x90a1cf, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false }));
+    glow.renderOrder = 3; countdown.renderOrder = 4; scene.add(glow); scene.add(countdown);
+    targetMeshes.push({ mesh, ring, mark, label, glow, countdown });
   }
   inkMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshBasicMaterial({ color: 0x90a1cf }), 192);
   inkMesh.count = 0; inkMesh.frustumCulled = false; scene.add(inkMesh);
@@ -88,7 +91,12 @@ const usb = new ProGCC((report, now) => {
   if (now - reportWindow >= 1000) { reportHz = Math.round(reportCount * 1000 / (now - reportWindow)); reportCount = 0; reportWindow = now; }
   $('usb-status').textContent = 'Live ProGCC input'; $('input-mode').textContent = 'PROGCC USB';
   if (edge.recenter) center();
-  if (edge.pause && ['running', 'paused'].includes(session.state)) pause();
+  if (edge.pause) {
+    const action = controllerSessionAction(session.state);
+    if (action === 'start' && !$('start').disabled) start();
+    else if (action === 'pause') pause();
+    return;
+  }
   if (session.state !== 'running') return;
   runInput = 'progcc';
   // Experimental local-axis response, firmware gain already included in samples.
@@ -155,7 +163,7 @@ function syncUI() {
   $('weapon-summary').textContent = weaponProfile.summary;
   $('keyboard-action').textContent = shooter ? 'hold to fire' : 'charge / release';
   canvas.setAttribute('aria-label', shooter ? 'Practice range. Arrow keys aim; hold Space to fire.' : 'Practice range. Arrow keys aim; hold Space to charge and release to fire.');
-  $('controller-controls').textContent = shooter ? 'Hold ZR to fire · Y recenter · Plus pause.' : 'ZR charge / release · hold ZR during a burst to queue the next charge · Y recenter · Plus pause.';
+  $('controller-controls').textContent = shooter ? 'Hold ZR to fire · Y recenter · Plus start / pause / resume.' : 'ZR charge / release · hold ZR during a burst to queue the next charge · Y recenter · Plus start / pause / resume.';
   $('scoring-note').textContent = shooter ? 'Tracking while firing measures time the fire control is held, including startup. Shots landed counts projectile impacts.' : 'Charging time counts toward tracking, but is excluded from tracking while firing.';
   $('charge-hint').textContent = shooter ? (usb.device ? 'HOLD ZR TO FIRE · RELEASE TO STOP' : 'HOLD SPACE OR LEFT MOUSE TO FIRE') : firing ? 'KEEP AIMING WHILE FIRING' : weapon.phase === 'charging' ? 'RELEASE TO FIRE' : session.state === 'complete' ? 'RESTART TO TRY AGAIN' : usb.device ? 'HOLD ZR TO CHARGE · RELEASE TO FIRE' : 'HOLD SPACE OR LEFT MOUSE TO CHARGE';
   if (session.state === 'complete' && !runSaved) {
@@ -213,12 +221,12 @@ function drawInk() {
 }
 const projected = THREE ? new THREE.Vector3() : null;
 function activeTarget() {
-  const first = Math.floor(motionTime * speed / 4) % field.count;
+  const first = targetCue(motionTime, speed).slot % field.count;
   for (let i = 0; i < field.count; i++) { const index = (first + i) % field.count; if (field.targets[index].hp > 0) return index; }
   return -1;
 }
 function placeTargets() {
-  const active = activeTarget();
+  const active = activeTarget(), cue = targetCue(motionTime, speed);
   targetMeshes.forEach((item, i) => {
     const state = field.targets[i], pos = drillTarget(routine, motionTime, speed, seed + i * 17);
     const base = layout[i];
@@ -232,6 +240,14 @@ function placeTargets() {
     item.ring.material.opacity = alive ? 1 : Math.max(0, 1 - age / 14);
     item.ring.scale.setScalar(radius / 0.32 * (alive ? 1 : 1 + age / 7));
     item.ring.material.color.setHex(routine !== 'acquire' || i === active ? 0x90a1cf : 0xaaa79f);
+    const designated = routine === 'acquire' && i === active && alive;
+    item.ring.material.color.setHex(designated ? 0xc3d3ff : routine !== 'acquire' ? 0x90a1cf : 0xaaa79f);
+    for (const cueMesh of [item.glow, item.countdown]) {
+      cueMesh.visible = designated && session.state !== 'ready';
+      cueMesh.position.copy(item.mesh.position); cueMesh.quaternion.copy(camera.quaternion);
+    }
+    item.glow.scale.setScalar(radius / 0.32);
+    item.countdown.scale.setScalar(radius / 0.32 * (1 + cue.remaining * 1.15));
     item.mesh.material.color.setHex(simulationFrame - state.lastHit < 3 ? 0x90a1cf : 0xf2f0ea);
     projected.copy(item.mesh.position); projected.y += radius + 0.18; projected.project(camera);
     item.label.hidden = session.state === 'ready' || !alive || projected.z < -1 || projected.z > 1 || Math.abs(projected.x) > 1 || Math.abs(projected.y) > 1;
@@ -282,7 +298,7 @@ function frame(now) {
     }
     if (routine === 'acquire') {
       const active = activeTarget(), state = field.targets[active];
-      if (state) acquisition.observe(Math.floor(motionTime * speed / 4) * 100000 + state.generation * 10 + active, session.elapsed - previousElapsed, aim.index === active);
+      if (state) acquisition.observe(targetCue(motionTime, speed).slot * 100000 + state.generation * 10 + active, session.elapsed - previousElapsed, aim.index === active);
     }
   }
   placeTargets(); const aim = pickTarget(), onTarget = aim.index !== -1;

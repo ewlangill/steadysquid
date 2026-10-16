@@ -69,3 +69,10 @@ export class ProGCC {
     if (device) { try { await device.close(); } catch {} }
   }
 }
+
+// The Plus button is a primary session control; no controller settings are written.
+export function controllerSessionAction(state) {
+  if (state === 'ready' || state === 'complete') return 'start';
+  if (state === 'running' || state === 'paused') return 'pause';
+  return null;
+}

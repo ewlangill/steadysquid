@@ -1,4 +1,4 @@
-import { WEAPONS } from './weapons.js?v=8b31b167417c27ac';
+import { WEAPONS } from './weapons.js?v=55f0171f7aa1aa9e';
 export const SESSION_SECONDS = 60;
 export class Splatling {
   constructor() { this.reset(); }
