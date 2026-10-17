@@ -1,15 +1,15 @@
-import { createLocalStore, cleanSettings, MODEL_VERSION } from './storage.js?v=5eec1156fecd0cb6';
-import { WEAPONS, routineHint, projectileSpeed } from './weapons.js?v=5eec1156fecd0cb6';
-import { InkCloud, shotSpread, spreadDirection, ShooterSpread } from './ink.js?v=5eec1156fecd0cb6';
-import { generateLayout, targetPosition } from './layout.js?v=5eec1156fecd0cb6';
-import { createChasePath, chasePosition, targetEnabled } from './chase.js?v=5eec1156fecd0cb6';
-import { freshSeed } from './random.js?v=5eec1156fecd0cb6';
-import { TargetField } from './targets.js?v=5eec1156fecd0cb6';
-import { ROUTINES, drillTarget, Acquisition, targetCue } from './drills.js?v=5eec1156fecd0cb6';
-import { ProGCC, MotionInput, controllerSessionAction } from './progcc.js?v=5eec1156fecd0cb6';
-import { SwitchPro } from './switchpro.js?v=5eec1156fecd0cb6';
-import { BrowserGamepad } from './gamepad.js?v=5eec1156fecd0cb6';
-import { Session, summarizeFrames } from './engine.js?v=5eec1156fecd0cb6';
+import { createLocalStore, cleanSettings, MODEL_VERSION } from './storage.js?v=201ea9c9f1cf7df2';
+import { WEAPONS, routineHint, projectileSpeed } from './weapons.js?v=201ea9c9f1cf7df2';
+import { InkCloud, shotSpread, spreadDirection, ShooterSpread } from './ink.js?v=201ea9c9f1cf7df2';
+import { generateLayout, targetPosition } from './layout.js?v=201ea9c9f1cf7df2';
+import { createChasePath, chasePosition, targetEnabled } from './chase.js?v=201ea9c9f1cf7df2';
+import { freshSeed } from './random.js?v=201ea9c9f1cf7df2';
+import { TargetField } from './targets.js?v=201ea9c9f1cf7df2';
+import { ROUTINES, drillTarget, Acquisition, targetCue } from './drills.js?v=201ea9c9f1cf7df2';
+import { ProGCC, MotionInput, controllerSessionAction } from './progcc.js?v=201ea9c9f1cf7df2';
+import { SwitchPro } from './switchpro.js?v=201ea9c9f1cf7df2';
+import { BrowserGamepad } from './gamepad.js?v=201ea9c9f1cf7df2';
+import { Session, summarizeFrames } from './engine.js?v=201ea9c9f1cf7df2';
 const $ = id => document.getElementById(id);
 const session = new Session();
 let controllerKind = 'progcc', usb;
@@ -151,9 +151,8 @@ function resetRoutine() {
   resetEndCard();
   resetInkAndLayout(); session.reset(); acquisition.reset(); field.reset(); simulationFrame = 0; simulationRemainder = 0; motionTime = 0; keys.clear(); center();
   $('welcome').hidden = false; $('routine-chip').textContent = ROUTINES[routine].label.toUpperCase();
-  $('routine-title').textContent = ROUTINES[routine].title; $('routine-hint').textContent = routineHint(routine, weaponProfile); $('routine-description').textContent = routineHint(routine, weaponProfile); $('welcome-title').textContent = ROUTINES[routine].title; $('welcome-description').textContent = routineHint(routine, weaponProfile);
+  $('routine-title').textContent = ROUTINES[routine].title; $('routine-description').textContent = routineHint(routine, weaponProfile); $('welcome-title').textContent = ROUTINES[routine].title; $('welcome-description').textContent = routineHint(routine, weaponProfile);
   $('acquisition-result').hidden = routine !== 'acquire';
-  $('spread-hint').textContent = routine === 'chase' ? 'Spread sets the single target’s left/right travel range, from 20° to 180°. Wide settings require turning to follow it. Changing spread resets the round.' : 'Spread targets across 20°–180°. At 180°, the outer targets are 90° left and right. Turn to reach them. Changing spread resets the round.';
   if (document.pointerLockElement === canvas) document.exitPointerLock();
   syncUI();
 }
