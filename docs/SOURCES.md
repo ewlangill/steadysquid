@@ -1,5 +1,14 @@
 # Sources and provenance
 
+## Mini Splatling — October 16, 2026
+
+The pinned v11.3 `WeaponSpinnerQuick` extraction explicitly supplies `ChargeFrame_First: 18`, `ChargeFrame_Second: 27`, `MaxShootingFrame_First: 42`, `MaxShootingFrame_Second: 84`, `RepeatFrame: 4`, and damage `ValueMax/ValueFullChargeMax: 320` (32 displayed HP).[^mini-data] These agree with Inkipedia's Splatoon 3 section, which states, “It takes 18 frames to charge the first circle”.[^mini-wiki] SHA-256 of the inspected raw record: `36d1af6547a876ed4ce0d1ecd6daa3a1f08290636c2ae95f099e79b06872a56f`. Both are community evidence, not an official Nintendo specification or hardware/game measurement; the wiki references the same parameter database and is not independent verification.
+
+The trainer uses these no-gear, grounded charge/burst timings and 32 maximum damage. Four impacts against a 100-HP target span 12 frames from first to fourth, excluding flight. Charge rings and discharge meter normalize to Mini's 84-frame full burst. Queued ZR recharging remains a trainer control feature. The record's 4-degree standing / 1.2-degree pitch bounds, 0.1 speed-randomization reference and 1.05-to-1.5 charge-dependent launch-speed endpoints inform the original approximation. Exact cone distribution, braking/gravity, render scale, startup/post-delay, jumping, movement, ink consumption and damage falloff are not reproduced. Heavy retains its previous parameters. No model is bundled in this preset.
+
+[^mini-data]: [Pinned Mini Splatling parameter extraction](https://github.com/Leanny/splat3/blob/7280ff9cde8bb1c5dcef46c700c326471584d2e6/data/parameter/1130/weapon/WeaponSpinnerQuick.game__GameParameterTable.json).
+[^mini-wiki]: Community [Inkipedia: Mini Splatling, Splatoon 3](https://splatoonwiki.org/wiki/Mini_Splatling#Splatoon_3).
+
 The protocol and implementation design are based on inspected source, not a hardware test:
 
 - HOJA3 app pinned at `94096f7192f5ed4c17d62674853cbf9d1ef7a789`.[^app]

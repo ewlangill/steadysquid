@@ -1,15 +1,15 @@
-import { createLocalStore, cleanSettings, MODEL_VERSION } from './storage.js?v=0482bb7b6affff62';
-import { WEAPONS, routineHint } from './weapons.js?v=0482bb7b6affff62';
-import { InkCloud, shotSpread, spreadDirection, ShooterSpread } from './ink.js?v=0482bb7b6affff62';
-import { generateLayout, targetPosition } from './layout.js?v=0482bb7b6affff62';
-import { createChasePath, chasePosition, targetEnabled } from './chase.js?v=0482bb7b6affff62';
-import { freshSeed } from './random.js?v=0482bb7b6affff62';
-import { TargetField, HEAVY } from './targets.js?v=0482bb7b6affff62';
-import { ROUTINES, drillTarget, Acquisition, targetCue } from './drills.js?v=0482bb7b6affff62';
-import { ProGCC, MotionInput, controllerSessionAction } from './progcc.js?v=0482bb7b6affff62';
-import { SwitchPro } from './switchpro.js?v=0482bb7b6affff62';
-import { BrowserGamepad } from './gamepad.js?v=0482bb7b6affff62';
-import { Session, summarizeFrames } from './engine.js?v=0482bb7b6affff62';
+import { createLocalStore, cleanSettings, MODEL_VERSION } from './storage.js?v=5eec1156fecd0cb6';
+import { WEAPONS, routineHint, projectileSpeed } from './weapons.js?v=5eec1156fecd0cb6';
+import { InkCloud, shotSpread, spreadDirection, ShooterSpread } from './ink.js?v=5eec1156fecd0cb6';
+import { generateLayout, targetPosition } from './layout.js?v=5eec1156fecd0cb6';
+import { createChasePath, chasePosition, targetEnabled } from './chase.js?v=5eec1156fecd0cb6';
+import { freshSeed } from './random.js?v=5eec1156fecd0cb6';
+import { TargetField } from './targets.js?v=5eec1156fecd0cb6';
+import { ROUTINES, drillTarget, Acquisition, targetCue } from './drills.js?v=5eec1156fecd0cb6';
+import { ProGCC, MotionInput, controllerSessionAction } from './progcc.js?v=5eec1156fecd0cb6';
+import { SwitchPro } from './switchpro.js?v=5eec1156fecd0cb6';
+import { BrowserGamepad } from './gamepad.js?v=5eec1156fecd0cb6';
+import { Session, summarizeFrames } from './engine.js?v=5eec1156fecd0cb6';
 const $ = id => document.getElementById(id);
 const session = new Session();
 let controllerKind = 'progcc', usb;
@@ -179,7 +179,7 @@ function syncUI() {
   $('pause').disabled = !['running', 'paused'].includes(session.state);
   const weapon = session.weapon, firing = weapon.phase === 'firing';
   const shooter = weaponProfile.family === 'shooter';
-  const amount = shooter ? Number(firing) : firing ? weapon.remaining / (HEAVY.fullBurstFrames / 60) : weapon.charge;
+  const amount = shooter ? Number(firing) : firing ? weapon.remaining / (weaponProfile.fullBurstFrames / 60) : weapon.charge;
   $('phase').textContent = firing ? (shooter ? 'FIRING' : 'DISCHARGING') : weapon.phase === 'charging' ? 'CHARGING' : session.state === 'paused' ? 'PAUSED' : session.state === 'complete' ? 'SESSION COMPLETE' : 'STANDBY';
   $('charge-fill').style.width = Math.min(100, amount * 100) + '%'; $('charge-fill').classList.toggle('firing', firing);
   $('charge-number').textContent = shooter ? (firing ? 'HELD' : 'READY') : Math.round(amount * 100) + '%';
@@ -212,7 +212,7 @@ function syncUI() {
 }
 function drawChargeRing() {
   const weapon = session.weapon, firing = weapon.phase === 'firing';
-  const amount = firing ? weapon.remaining / (HEAVY.fullBurstFrames / 60) : weapon.charge;
+  const amount = firing ? weapon.remaining / (weaponProfile.fullBurstFrames / 60) : weapon.charge;
   const visible = weaponProfile.family === 'splatling' && session.state === 'running' && ['charging', 'firing'].includes(weapon.phase);
   $('charge-reticle').hidden = !visible;
   if (!visible) return;
@@ -232,7 +232,7 @@ function emitInk() {
   const spread = shotSpread(seed, shotSerial++, burstShot++, weaponProfile, weaponProfile.family === 'shooter' ? shooterSpread.sample(simulationFrame, weaponProfile) : undefined);
   const direction = spreadDirection(inkForward.toArray(), inkRight.toArray(), inkUp.toArray(), spread);
   const origin = camera.position.clone().addScaledVector(inkRight, 0.12).addScaledVector(inkUp, -0.1).addScaledVector(inkForward, 0.25);
-  const speed = (weaponProfile.family === 'shooter' ? weaponProfile.projectileSpeed : 1.05 + Math.min(1, session.weapon.charge * 2) * 1.05) * spread.speed;
+  const speed = projectileSpeed(weaponProfile, session.weapon.charge) * spread.speed;
   ink.launch(origin.toArray(), direction, speed, weaponProfile.damage);
 }
 function drawInk() {

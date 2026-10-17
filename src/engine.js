@@ -1,15 +1,15 @@
-import { WEAPONS } from './weapons.js?v=0482bb7b6affff62';
+import { WEAPONS } from './weapons.js?v=5eec1156fecd0cb6';
 export const SESSION_SECONDS = 60;
 export class Splatling {
-  constructor() { this.reset(); }
+  constructor(profile = WEAPONS.heavy) { this.profile = profile; this.reset(); }
   reset() { this.phase = 'idle'; this.charge = 0; this.remaining = 0; this.chargeFrames = 0; this.burstFrames = 0; this.fireFrame = 0; this.fraction = 0; this.held = false; }
   beginCharge() { this.phase = 'charging'; this.charge = 0; this.chargeFrames = 0; this.remaining = 0; }
   press() { this.held = true; if (this.phase === 'idle') this.beginCharge(); }
   release() {
     this.held = false;
     if (this.phase !== 'charging') return;
-    const f = this.chargeFrames;
-    this.burstFrames = Math.floor(f <= 48 ? f / 48 * 80 : 80 + (f - 48) / 24 * 80);
+    const f = this.chargeFrames, p = this.profile;
+    this.burstFrames = Math.floor(f <= p.firstChargeFrames ? f / p.firstChargeFrames * p.firstBurstFrames : p.firstBurstFrames + (f - p.firstChargeFrames) / (p.fullChargeFrames - p.firstChargeFrames) * (p.fullBurstFrames - p.firstBurstFrames));
     this.remaining = this.burstFrames / 60; this.phase = this.burstFrames > 0 ? 'firing' : 'idle'; this.fireFrame = 0; this.fraction = 0;
   }
   step(dt) {
@@ -19,10 +19,11 @@ export class Splatling {
     let firingFrames = 0, shots = 0;
     for (let i = 0; i < ticks; i++) {
       if (this.phase === 'charging') {
-        this.chargeFrames = Math.min(72, this.chargeFrames + 1);
-        this.charge = this.chargeFrames <= 48 ? this.chargeFrames / 48 * 0.5 : 0.5 + (this.chargeFrames - 48) / 24 * 0.5;
+        const p = this.profile;
+        this.chargeFrames = Math.min(p.fullChargeFrames, this.chargeFrames + 1);
+        this.charge = this.chargeFrames <= p.firstChargeFrames ? this.chargeFrames / p.firstChargeFrames * 0.5 : 0.5 + (this.chargeFrames - p.firstChargeFrames) / (p.fullChargeFrames - p.firstChargeFrames) * 0.5;
       } else if (this.phase === 'firing') {
-        if (this.fireFrame % 4 === 0) shots++;
+        if (this.fireFrame % this.profile.shotIntervalFrames === 0) shots++;
         this.fireFrame++; firingFrames++; this.burstFrames--;
         this.remaining = this.burstFrames / 60;
         if (this.burstFrames <= 0) { this.phase = 'idle'; this.charge = 0; if (this.held) this.beginCharge(); }
@@ -57,7 +58,7 @@ export class Shooter {
 }
 export class Session {
   constructor(weaponId = 'heavy') { this.setWeapon(weaponId); }
-  setWeapon(id) { this.weaponId = Object.hasOwn(WEAPONS, id) ? id : 'heavy'; this.weapon = WEAPONS[this.weaponId].family === 'splatling' ? new Splatling() : new Shooter(WEAPONS[this.weaponId]); this.reset(); }
+  setWeapon(id) { this.weaponId = Object.hasOwn(WEAPONS, id) ? id : 'heavy'; this.weapon = WEAPONS[this.weaponId].family === 'splatling' ? new Splatling(WEAPONS[this.weaponId]) : new Shooter(WEAPONS[this.weaponId]); this.reset(); }
   reset() { this.elapsed = 0; this.onTarget = 0; this.fireTime = 0; this.fireOnTarget = 0; this.errorSum = 0; this.shots = 0; this.hits = 0; this.state = 'ready'; this.weapon.reset(); }
   start() { this.reset(); this.state = 'running'; }
   pause() { if (this.state === 'running') { this.state = 'paused'; this.weapon.reset(); } }

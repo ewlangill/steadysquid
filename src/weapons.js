@@ -1,13 +1,20 @@
 export const WEAPONS = Object.freeze({
+  mini: Object.freeze({ name: 'Mini Splatling', family: 'splatling', firstChargeFrames: 18, fullChargeFrames: 27, firstBurstFrames: 42, fullBurstFrames: 84, shotIntervalFrames: 4, minProjectileSpeed: 1.05, maxProjectileSpeed: 1.5, damage: 32, hits: 4, yaw: 4, pitch: 1.2, speedRandom: 0.1,
+    summary: '18 / 27 f charge · 42 / 84 f burst · 4 f per shot. 32 max damage · four full-damage hits. Standing spread and travel are approximate; damage falloff is not simulated.' }),
   splattershotpro: Object.freeze({ name: 'Splattershot Pro', family: 'shooter', repeatFrames: 8, startupFrames: 3, projectileSpeed: 3.833333, damage: 45, hits: 3, yaw: 2.5, pitch: 2.5, speedRandom: 0, biasMin: 0.01, biasStep: 0.01, biasRecovery: 0.005,
     summary: 'Hold to fire. 8 f per shot · 45 max damage · three full-damage hits. 2.5° standing limit. Startup is a provisional 3 f. Center-weighted spread and recovery are approximations; falloff is not simulated.' }),
   nzap85: Object.freeze({ name: "N-ZAP '85", family: 'shooter', biasMin: 0.01, biasStep: 0.005, biasRecovery: 0.005, repeatFrames: 5, startupFrames: 3, projectileSpeed: 2.2, damage: 30, hits: 4, yaw: 4.75, pitch: 4.75, speedRandom: 0,
     summary: 'Hold to fire. 5 f per shot · 30 max damage · four full-damage hits per target. Startup is a provisional 3 f. Centered opening spread, sustained-fire widening and recovery are approximate; damage falloff is not simulated.' }),
-  heavy: Object.freeze({ name: 'Heavy Splatling', family: 'splatling', damage: 30, hits: 4, yaw: 3.3, pitch: 1.6, speedRandom: 0.12,
+  heavy: Object.freeze({ name: 'Heavy Splatling', family: 'splatling', firstChargeFrames: 48, fullChargeFrames: 72, firstBurstFrames: 80, fullBurstFrames: 160, shotIntervalFrames: 4, minProjectileSpeed: 1.05, maxProjectileSpeed: 2.1, damage: 30, hits: 4, yaw: 3.3, pitch: 1.6, speedRandom: 0.12,
     summary: '48 / 72 f charge · 80 / 160 f burst · 4 f per shot. 30 max damage. Spread and travel are approximate; damage falloff is not simulated.' }),
   splattershot: Object.freeze({ name: 'Splattershot', family: 'shooter', biasMin: 0.01, biasStep: 0.01, biasRecovery: 0.015, repeatFrames: 6, startupFrames: 3, projectileSpeed: 2.266, damage: 36, hits: 3, yaw: 4.86, pitch: 4.86, speedRandom: 0,
     summary: 'Hold to fire. 36 max damage · three full-damage hits per target. Provisional timing: 6 f per shot, 3 f startup. Centered opening spread, sustained-fire widening and recovery are approximate; damage falloff is not simulated.' }),
 });
+// Scene-unit launch speed only; braking, gravity and spread remain trainer approximations.
+export function projectileSpeed(profile, charge = 0) {
+  if (profile.family === 'shooter') return profile.projectileSpeed;
+  return profile.minProjectileSpeed + Math.min(1, Math.max(0, charge) * 2) * (profile.maxProjectileSpeed - profile.minProjectileSpeed);
+}
 export function routineHint(routine, weapon) {
   const hits = weapon.hits === 3 ? 'three' : 'four';
   if (routine === 'chase') return `Follow the single target through short strafes and quick reversals. Spread sets left/right travel; speed sets pace. Land ${hits} full-damage hits to pop it. It returns shortly after each pop.`;
