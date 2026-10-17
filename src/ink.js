@@ -1,5 +1,5 @@
-import { random01 } from './random.js?v=6e85ad94e5ae793e';
-import { advanceVelocity, damageAtAge } from './ballistics.js?v=6e85ad94e5ae793e';
+import { random01 } from './random.js?v=e15bb36e212e9d5e';
+import { advanceVelocity, damageAtAge } from './ballistics.js?v=e15bb36e212e9d5e';
 // Original approximation informed by each preset's spread limits; game RNG/bias is not reproduced.
 export function shotSpread(seed, serial, burstShot = serial, profile = { yaw: 3.3, pitch: 1.6, speedRandom: 0.12 }, shooterBias) {
   const n = serial * 4, shooter = profile.family === 'shooter';

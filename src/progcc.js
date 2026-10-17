@@ -8,6 +8,7 @@ export function decodeReport(view) {
     zr: !!(input(12) & 128) || (input(13) & 127) >= 64,
     recenter: !!(input(2) & 128), pause: !!(input(18) & 128),
     stickX: Math.max(-1, Math.min(1, ((input(32) & 127) - (input(33) & 127)) / 64)),
+    stickY: Math.max(-1, Math.min(1, ((input(34) & 127) - (input(35) & 127)) / 64)),
   };
 }
 export class MotionInput {
@@ -21,6 +22,7 @@ export class MotionInput {
     this.lastAt = now; this.previous = report;
     return {
       dt: continuous ? dt : 0,
+      lostContinuity: dt > 0.1 || dt < 0,
       press: !!old && report.zr && !old.zr,
       release: !!old && !report.zr && old.zr,
       recenter: !!old && report.recenter && !old.recenter,

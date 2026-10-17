@@ -85,3 +85,12 @@ Splat Charger uses the pinned `WeaponChargerNormal` record: damage 40–80 for p
 
 [^charger-data]: [Pinned Splat Charger parameters](https://github.com/Leanny/splat3/blob/7280ff9cde8bb1c5dcef46c700c326471584d2e6/data/parameter/1130/weapon/WeaponChargerNormal.game__GameParameterTable.json). Community-extracted primary record, not Nintendo documentation.
 [^charger-wiki]: Community [Inkipedia: Splat Charger, Splatoon 3 data](https://splatoonwiki.org/wiki/Splat_Charger#Splatoon_3). Its database references overlap with the extraction, so corroboration is not independent engine verification.
+
+
+## Independent stick/gyro response and local input check — October 17, 2026
+
+The trainer now separates gyro and stick gain, defaults motion-capable controllers to gyro plus horizontal stick, and offers explicit sticks-only / both-axis combined modes. Inkipedia documents separate Splatoon 3 sensitivities and the motion-mode vertical-stick restriction.[^input-options] This is community control-layout evidence, not verification of Nintendo's response curve. Default stick speed (2 rad/s), optional precision exponent (1.5), timing integration and additive composition are original trainer choices. Existing ProGCC normalization and confirmed axes are preserved; firmware gain is not applied again. The official pinned decoder/enum cited above supports stick scaling and the added RY up/down entries 34/35. Standard Gamepad always supplies both stick axes and no gyro.
+
+Five-second Input check uses only fresh report-time intervals and retains aggregate requested gyro/stick angles in memory. It rejects insufficient coverage and invalidates on changed settings/recenter/disconnect or a drill start. No raw samples are stored/uploaded and no controller configuration is written. Angles are before the camera pitch clamp and remain subject to provisional input scaling; this is a calibration aid, not a hardware/game match measurement. Exact sensitivity conversion, acceleration/filtering, orientation-aware gyro, FOV and third-person/recenter behavior remain pending research.
+
+[^input-options]: Community [Inkipedia: Splatoon 3 options](https://splatoonwiki.org/wiki/Options#Splatoon_3).

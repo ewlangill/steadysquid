@@ -1,16 +1,17 @@
-import { createLocalStore, cleanSettings, MODEL_VERSION } from './storage.js?v=6e85ad94e5ae793e';
-import { WEAPONS, routineHint, projectileSpeed } from './weapons.js?v=6e85ad94e5ae793e';
-import { projectileSpec } from './ballistics.js?v=6e85ad94e5ae793e';
-import { InkCloud, shotSpread, spreadDirection, ShooterSpread } from './ink.js?v=6e85ad94e5ae793e';
-import { generateLayout, targetPosition } from './layout.js?v=6e85ad94e5ae793e';
-import { createChasePath, chasePosition, targetEnabled } from './chase.js?v=6e85ad94e5ae793e';
-import { freshSeed } from './random.js?v=6e85ad94e5ae793e';
-import { TargetField } from './targets.js?v=6e85ad94e5ae793e';
-import { ROUTINES, drillTarget, Acquisition, targetCue } from './drills.js?v=6e85ad94e5ae793e';
-import { ProGCC, MotionInput, controllerSessionAction } from './progcc.js?v=6e85ad94e5ae793e';
-import { SwitchPro } from './switchpro.js?v=6e85ad94e5ae793e';
-import { BrowserGamepad } from './gamepad.js?v=6e85ad94e5ae793e';
-import { Session, summarizeFrames } from './engine.js?v=6e85ad94e5ae793e';
+import { createLocalStore, cleanSettings, MODEL_VERSION } from './storage.js?v=e15bb36e212e9d5e';
+import { WEAPONS, routineHint, projectileSpeed } from './weapons.js?v=e15bb36e212e9d5e';
+import { projectileSpec } from './ballistics.js?v=e15bb36e212e9d5e';
+import { aimDelta, InputCheck } from './aim.js?v=e15bb36e212e9d5e';
+import { InkCloud, shotSpread, spreadDirection, ShooterSpread } from './ink.js?v=e15bb36e212e9d5e';
+import { generateLayout, targetPosition } from './layout.js?v=e15bb36e212e9d5e';
+import { createChasePath, chasePosition, targetEnabled } from './chase.js?v=e15bb36e212e9d5e';
+import { freshSeed } from './random.js?v=e15bb36e212e9d5e';
+import { TargetField } from './targets.js?v=e15bb36e212e9d5e';
+import { ROUTINES, drillTarget, Acquisition, targetCue } from './drills.js?v=e15bb36e212e9d5e';
+import { ProGCC, MotionInput, controllerSessionAction } from './progcc.js?v=e15bb36e212e9d5e';
+import { SwitchPro } from './switchpro.js?v=e15bb36e212e9d5e';
+import { BrowserGamepad } from './gamepad.js?v=e15bb36e212e9d5e';
+import { Session, summarizeFrames } from './engine.js?v=e15bb36e212e9d5e';
 const $ = id => document.getElementById(id);
 const session = new Session();
 let controllerKind = 'progcc', usb;
@@ -23,7 +24,7 @@ let renderer, scene, camera, target, halo, floorMark, nextDraw = 0;
 let radius = 0.32, routine = 'smooth', seed = 1, arcDegrees = 120;
 const acquisition = new Acquisition(), field = new TargetField(5), targetMeshes = [], THREE = window.THREE;
 let simulationFrame = 0, simulationRemainder = 0, shotSerial = 0, burstShot = 0;
-const ink = new InkCloud(), shooterSpread = new ShooterSpread();
+const ink = new InkCloud(), shooterSpread = new ShooterSpread(), inputCheck = new InputCheck();
 let layout = generateLayout(seed, field.count, radius, arcDegrees), chasePath = createChasePath(seed, arcDegrees), inkMesh, splashMesh;
 function showError(message) { $('error').hidden = false; $('error').textContent = message; $('start').disabled = true; }
 try {
@@ -65,7 +66,7 @@ try {
 function updateAim() { if (camera) { camera.rotation.y = yaw; camera.rotation.x = pitch; } }
 function center() { yaw = pitch = 0; updateAim(); }
 function resetEndCard() { $('round-results').hidden = true; $('welcome').classList.remove('results'); $('welcome-label').textContent = 'PRACTICE'; }
-function start({ replay = false } = {}) { resetEndCard(); runSaved = false; runInput = usb.device ? controllerKind : 'mouse-keyboard'; if (!replay && $('fresh-layout').checked) seed = freshSeed(seed); $('seed').value = seed; resetInkAndLayout(); session.start(); acquisition.reset(); field.reset(); simulationFrame = 0; simulationRemainder = 0; motionTime = 0; center(); frameSamples.length = 0; $('welcome').hidden = true; $('pause').disabled = false; canvas.focus(); try { const result = usb.device ? null : canvas.requestPointerLock?.(); result?.catch?.(() => {}); } catch {} syncUI(); }
+function start({ replay = false } = {}) { inputCheck.cancel('Drill started. Stop the drill before measuring again.'); resetEndCard(); runSaved = false; runInput = usb.device ? controllerKind : 'mouse-keyboard'; if (!replay && $('fresh-layout').checked) seed = freshSeed(seed); $('seed').value = seed; resetInkAndLayout(); session.start(); acquisition.reset(); field.reset(); simulationFrame = 0; simulationRemainder = 0; motionTime = 0; center(); frameSamples.length = 0; $('welcome').hidden = true; $('pause').disabled = false; canvas.focus(); try { const result = usb.device ? null : canvas.requestPointerLock?.(); result?.catch?.(() => {}); } catch {} syncUI(); }
 function pause() {
   if (session.state === 'running') { session.pause(); keys.clear(); if (document.pointerLockElement === canvas) document.exitPointerLock(); }
   else if (session.state === 'paused') { session.resume(); canvas.focus(); }
@@ -94,31 +95,33 @@ let gyroGain = 1, reportCount = 0, reportWindow = 0, reportHz = 0, latestReport 
 function handleControllerReport(report, now) {
   const edge = motion.sample(report, now); latestReport = report; staleShown = false;
   reportCount++;
+  if (edge.lostContinuity) {
+    inputCheck.cancel('Input gap. Measure again with a continuous connection.');
+    if (session.state === 'running') { session.pause(); keys.clear(); $('usb-status').textContent = 'Input gap. Resume when the controller is responding.'; syncUI(); return; }
+  }
   if (!reportWindow) reportWindow = now;
   if (now - reportWindow >= 1000) { reportHz = Math.round(reportCount * 1000 / (now - reportWindow)); reportCount = 0; reportWindow = now; }
   $('usb-status').textContent = 'Live ' + controllerNames[controllerKind] + ' input' + (controllerKind === 'switchpro' ? ' · wired preview' : controllerKind === 'gamepad' ? ' · sticks/buttons only' : ''); $('input-mode').textContent = controllerNames[controllerKind].toUpperCase();
-  if (edge.recenter) center();
+  if (edge.recenter) { center(); inputCheck.cancel('Recentered. Start another measurement.'); }
   if (edge.pause) {
     const action = controllerSessionAction(session.state);
     if (action === 'start' && !$('start').disabled) start();
     else if (action === 'pause') pause();
     return;
   }
+  const delta = aimDelta(report, edge.recenter ? 0 : edge.dt, currentSettings());
+  inputCheck.sample(delta, edge.dt, now);
   if (session.state !== 'running') return;
   runInput = controllerKind;
-  // Experimental local-axis response, firmware gain already included in samples.
-  // 2000 dps full-scale normalization is provisional until physically calibrated.
-  const scale = (report.gyroDps ? 1 : 2000 / 32768) * Math.PI / 180 * gyroGain * edge.dt;
-  yaw += report.gyro[$('yaw-axis').value] * scale * ($('invert-x').checked ? -1 : 1);
-  pitch = Math.max(-1.3, Math.min(1.3, pitch + report.gyro.x * scale * ($('invert-y').checked ? -1 : 1)));
-  yaw -= report.stickX * 2 * edge.dt;
-  pitch = Math.max(-1.3, Math.min(1.3, pitch + (report.stickY || 0) * 2 * edge.dt));
+  yaw += delta.yaw;
+  pitch = Math.max(-1.3, Math.min(1.3, pitch + delta.pitch));
   if (edge.press) session.press(); if (edge.release) session.release();
   updateAim();
 }
 function handleControllerStatus(message) {
   $('usb-status').textContent = message;
   if (!usb.device) {
+    inputCheck.cancel('Controller disconnected. Reconnect and measure again.');
     motion.reset(); latestReport = null; $('input-mode').textContent = 'MOUSE PREVIEW';
     $('usb-data').textContent = 'No live controller input.'; $('connect').textContent = 'Connect ' + controllerNames[controllerKind];
     if (session.state === 'running') pause();
@@ -148,6 +151,25 @@ $('connect').addEventListener('click', async () => {
   finally { $('connect').disabled = $('controller-kind').disabled = false; controllerUI(); }
 });
 $('gyro-gain').addEventListener('input', event => { gyroGain = +event.target.value; $('gyro-value').textContent = gyroGain.toFixed(1) + '×'; });
+$('stick-gain').addEventListener('input', event => { $('stick-value').textContent = Number(event.target.value).toFixed(1) + '×'; });
+$('measure-input').addEventListener('click', () => {
+  const now = performance.now();
+  if (!usb.device || !latestReport || motion.stale(now) || session.state === 'running') return;
+  inputCheck.start(now); syncInputCheck(now);
+});
+function syncInputCheck(now) {
+  inputCheck.poll(now);
+  $('measure-input').disabled = inputCheck.state === 'measuring' || session.state === 'running' || !usb.device || !latestReport || motion.stale(now);
+  const state = inputCheck.state;
+  $('input-check-status').textContent = state === 'measuring' ? `Measuring · ${Math.max(0, 5 - (now - inputCheck.startAt) / 1000).toFixed(1)} s remaining` : state === 'complete' ? `5-second trainer input check · ${inputCheck.covered.toFixed(2)} s of fresh samples. Totals are before camera pitch limits.` : inputCheck.message || 'Connect a controller. Measure while the drill is stopped.';
+  $('input-check-result').hidden = state !== 'complete';
+  if (state === 'complete') {
+    const d = inputCheck.degrees, pair = (a, b) => `${a.toFixed(1)}° / ${b.toFixed(1)}°`;
+    $('check-gyro').textContent = pair(d.gyroYaw, d.gyroPitch); $('check-stick').textContent = pair(d.stickYaw, d.stickPitch);
+    $('check-total').textContent = pair(d.gyroYaw + d.stickYaw, d.gyroPitch + d.stickPitch);
+  }
+}
+
 function resetRoutine() {
   resetEndCard();
   resetInkAndLayout(); session.reset(); acquisition.reset(); field.reset(); simulationFrame = 0; simulationRemainder = 0; motionTime = 0; keys.clear(); center();
@@ -166,6 +188,7 @@ $('seed').addEventListener('change', event => { seed = Math.max(1, Math.min(9999
 $('size').addEventListener('input', event => { const factor = +event.target.value; radius = 0.32 * factor; for (const item of targetMeshes) { item.mesh.scale.setScalar(factor); item.ring.scale.setScalar(factor); } $('size-value').textContent = factor.toFixed(1) + '×'; resetRoutine(); });
 const percent = n => n === null ? '—' : Math.round(n * 100);
 function syncUI() {
+  syncInputCheck(performance.now());
   $('acquisition-time').textContent = acquisition.mean === null ? '—' : acquisition.mean.toFixed(2) + ' s mean';
   $('acquisition-count').textContent = `${acquisition.times.length} / ${acquisition.attempts} targets acquired`;
   if (latestReport) $('usb-data').textContent = `${reportHz} reports/s · gyro ${latestReport.gyro.x}, ${latestReport.gyro.y}, ${latestReport.gyro.z} · ZR ${latestReport.zr ? 'held' : 'up'}`;
@@ -352,7 +375,7 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 function currentSettings() {
-  return cleanSettings({ controller: controllerKind, weapon: session.weaponId, routine, seed, arcDegrees, size: radius / 0.32, speed, sensitivity, gyroGain, yawAxis: $('yaw-axis').value, invertX: $('invert-x').checked, invertY: $('invert-y').checked, freshLayout: $('fresh-layout').checked });
+  return cleanSettings({ controller: controllerKind, weapon: session.weaponId, routine, seed, arcDegrees, size: radius / 0.32, speed, sensitivity, gyroGain, stickGain: +$('stick-gain').value, aimMode: $('aim-mode').value, stickCurve: $('stick-curve').value, stickInvertX: $('stick-invert-x').checked, stickInvertY: $('stick-invert-y').checked, yawAxis: $('yaw-axis').value, invertX: $('invert-x').checked, invertY: $('invert-y').checked, freshLayout: $('fresh-layout').checked });
 }
 function renderHistory() {
   const list = $('history-list'); list.replaceChildren();
@@ -366,18 +389,19 @@ function renderHistory() {
   }
 }
 const saved = localStore.settings();
-for (const [id, key] of Object.entries({ 'controller-kind': 'controller', weapon: 'weapon', routine: 'routine', seed: 'seed', size: 'size', 'target-arc': 'arcDegrees', speed: 'speed', sensitivity: 'sensitivity', 'gyro-gain': 'gyroGain', 'yaw-axis': 'yawAxis' })) $(id).value = saved[key];
-for (const [id, key] of Object.entries({ 'invert-x': 'invertX', 'invert-y': 'invertY', 'fresh-layout': 'freshLayout' })) $(id).checked = saved[key];
+for (const [id, key] of Object.entries({ 'controller-kind': 'controller', weapon: 'weapon', routine: 'routine', seed: 'seed', size: 'size', 'target-arc': 'arcDegrees', speed: 'speed', sensitivity: 'sensitivity', 'gyro-gain': 'gyroGain', 'stick-gain': 'stickGain', 'aim-mode': 'aimMode', 'stick-curve': 'stickCurve', 'yaw-axis': 'yawAxis' })) $(id).value = saved[key];
+for (const [id, key] of Object.entries({ 'invert-x': 'invertX', 'invert-y': 'invertY', 'stick-invert-x': 'stickInvertX', 'stick-invert-y': 'stickInvertY', 'fresh-layout': 'freshLayout' })) $(id).checked = saved[key];
 controllerKind = saved.controller; usb = adapters[controllerKind]; controllerUI(); $('usb-status').textContent = 'Connect ' + controllerNames[controllerKind] + ' to begin.';
 session.setWeapon(saved.weapon); weaponProfile = WEAPONS[saved.weapon]; routine = saved.routine; seed = saved.seed; arcDegrees = saved.arcDegrees; radius = 0.32 * saved.size; speed = saved.speed; sensitivity = saved.sensitivity; gyroGain = saved.gyroGain;
 for (const item of targetMeshes) item.mesh.scale.setScalar(saved.size);
-for (const [id, value] of Object.entries({ 'size-value': saved.size, 'speed-value': speed, 'sens-value': sensitivity, 'gyro-value': gyroGain })) $(id).textContent = value.toFixed(1) + '×';
+for (const [id, value] of Object.entries({ 'size-value': saved.size, 'speed-value': speed, 'sens-value': sensitivity, 'gyro-value': gyroGain, 'stick-value': saved.stickGain })) $(id).textContent = value.toFixed(1) + '×';
 $('arc-value').textContent = arcDegrees + '°';
-for (const id of ['weapon', 'routine', 'seed', 'size', 'target-arc', 'speed', 'sensitivity', 'gyro-gain', 'yaw-axis', 'invert-x', 'invert-y', 'fresh-layout']) {
+for (const id of ['weapon', 'routine', 'seed', 'size', 'target-arc', 'speed', 'sensitivity', 'gyro-gain', 'stick-gain', 'aim-mode', 'stick-curve', 'yaw-axis', 'invert-x', 'invert-y', 'stick-invert-x', 'stick-invert-y', 'fresh-layout']) {
   $(id).addEventListener('change', () => { localStore.saveSettings(currentSettings()); if (!localStore.available) syncUI(); });
 }
 $('export-settings').addEventListener('click', () => {
   const blob = new Blob([JSON.stringify({ app: 'SteadySquid 0.1', modelVersion: MODEL_VERSION, settings: currentSettings() }, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob), link = document.createElement('a'); link.href = url; link.download = 'steadysquid-settings.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
+for (const id of ['gyro-gain', 'stick-gain', 'aim-mode', 'stick-curve', 'yaw-axis', 'invert-x', 'invert-y', 'stick-invert-x', 'stick-invert-y']) $(id).addEventListener('change', () => { inputCheck.cancel('Settings changed. Measure again with the new settings.'); resetRoutine(); });
 renderHistory(); resetRoutine();

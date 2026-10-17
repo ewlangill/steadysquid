@@ -1,7 +1,7 @@
 export function gamepadReport(pad) {
   if(!pad?.connected||pad.mapping!=='standard')return null;
   const axis=n=>{const v=Number.isFinite(n)?Math.max(-1,Math.min(1,n)):0;return Math.abs(v)<0.12?0:Math.sign(v)*(Math.abs(v)-0.12)/0.88;};
-  return {gyro:{x:0,y:0,z:0},gyroDps:true,stickX:axis(pad.axes[2]),stickY:-axis(pad.axes[3]),zr:!!pad.buttons[7]?.pressed,recenter:!!pad.buttons[3]?.pressed,pause:!!pad.buttons[9]?.pressed};
+  return {gyro:{x:0,y:0,z:0},gyroDps:true,hasGyro:false,stickX:axis(pad.axes[2]),stickY:-axis(pad.axes[3]),zr:!!pad.buttons[7]?.pressed,recenter:!!pad.buttons[3]?.pressed,pause:!!pad.buttons[9]?.pressed};
 }
 export class BrowserGamepad {
   constructor(onReport,onStatus,nav=globalThis.navigator){this.onReport=onReport;this.onStatus=onStatus;this.nav=nav;this.device=null;}
