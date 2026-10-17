@@ -1,15 +1,19 @@
-import { createLocalStore, cleanSettings, MODEL_VERSION } from './storage.js?v=4770694482d83370';
-import { WEAPONS, routineHint } from './weapons.js?v=4770694482d83370';
-import { InkCloud, shotSpread, spreadDirection } from './ink.js?v=4770694482d83370';
-import { generateLayout, targetPosition } from './layout.js?v=4770694482d83370';
-import { createChasePath, chasePosition, targetEnabled } from './chase.js?v=4770694482d83370';
-import { freshSeed } from './random.js?v=4770694482d83370';
-import { TargetField, HEAVY } from './targets.js?v=4770694482d83370';
-import { ROUTINES, drillTarget, Acquisition, targetCue } from './drills.js?v=4770694482d83370';
-import { ProGCC, MotionInput, controllerSessionAction } from './progcc.js?v=4770694482d83370';
-import { Session, summarizeFrames } from './engine.js?v=4770694482d83370';
+import { createLocalStore, cleanSettings, MODEL_VERSION } from './storage.js?v=0482bb7b6affff62';
+import { WEAPONS, routineHint } from './weapons.js?v=0482bb7b6affff62';
+import { InkCloud, shotSpread, spreadDirection, ShooterSpread } from './ink.js?v=0482bb7b6affff62';
+import { generateLayout, targetPosition } from './layout.js?v=0482bb7b6affff62';
+import { createChasePath, chasePosition, targetEnabled } from './chase.js?v=0482bb7b6affff62';
+import { freshSeed } from './random.js?v=0482bb7b6affff62';
+import { TargetField, HEAVY } from './targets.js?v=0482bb7b6affff62';
+import { ROUTINES, drillTarget, Acquisition, targetCue } from './drills.js?v=0482bb7b6affff62';
+import { ProGCC, MotionInput, controllerSessionAction } from './progcc.js?v=0482bb7b6affff62';
+import { SwitchPro } from './switchpro.js?v=0482bb7b6affff62';
+import { BrowserGamepad } from './gamepad.js?v=0482bb7b6affff62';
+import { Session, summarizeFrames } from './engine.js?v=0482bb7b6affff62';
 const $ = id => document.getElementById(id);
 const session = new Session();
+let controllerKind = 'progcc', usb;
+const controllerNames = { progcc: 'ProGCC', switchpro: 'Switch Pro', gamepad: 'Gamepad' };
 let weaponProfile = WEAPONS.heavy, runSaved = false, runInput = 'mouse-keyboard';
 const localStore = createLocalStore({ getItem: key => localStorage.getItem(key), setItem: (key, value) => localStorage.setItem(key, value) });
 const canvas = $('range'), keys = new Set(), frameSamples = [];
@@ -18,7 +22,7 @@ let renderer, scene, camera, target, halo, floorMark, nextDraw = 0;
 let radius = 0.32, routine = 'smooth', seed = 1, arcDegrees = 120;
 const acquisition = new Acquisition(), field = new TargetField(5), targetMeshes = [], THREE = window.THREE;
 let simulationFrame = 0, simulationRemainder = 0, shotSerial = 0, burstShot = 0;
-const ink = new InkCloud();
+const ink = new InkCloud(), shooterSpread = new ShooterSpread();
 let layout = generateLayout(seed, field.count, radius, arcDegrees), chasePath = createChasePath(seed, arcDegrees), inkMesh, splashMesh;
 function showError(message) { $('error').hidden = false; $('error').textContent = message; $('start').disabled = true; }
 try {
@@ -60,7 +64,7 @@ try {
 function updateAim() { if (camera) { camera.rotation.y = yaw; camera.rotation.x = pitch; } }
 function center() { yaw = pitch = 0; updateAim(); }
 function resetEndCard() { $('round-results').hidden = true; $('welcome').classList.remove('results'); $('welcome-label').textContent = 'PRACTICE'; }
-function start({ replay = false } = {}) { resetEndCard(); runSaved = false; runInput = usb.device ? 'progcc' : 'mouse-keyboard'; if (!replay && $('fresh-layout').checked) seed = freshSeed(seed); $('seed').value = seed; resetInkAndLayout(); session.start(); acquisition.reset(); field.reset(); simulationFrame = 0; simulationRemainder = 0; motionTime = 0; center(); frameSamples.length = 0; $('welcome').hidden = true; $('pause').disabled = false; canvas.focus(); try { const result = usb.device ? null : canvas.requestPointerLock?.(); result?.catch?.(() => {}); } catch {} syncUI(); }
+function start({ replay = false } = {}) { resetEndCard(); runSaved = false; runInput = usb.device ? controllerKind : 'mouse-keyboard'; if (!replay && $('fresh-layout').checked) seed = freshSeed(seed); $('seed').value = seed; resetInkAndLayout(); session.start(); acquisition.reset(); field.reset(); simulationFrame = 0; simulationRemainder = 0; motionTime = 0; center(); frameSamples.length = 0; $('welcome').hidden = true; $('pause').disabled = false; canvas.focus(); try { const result = usb.device ? null : canvas.requestPointerLock?.(); result?.catch?.(() => {}); } catch {} syncUI(); }
 function pause() {
   if (session.state === 'running') { session.pause(); keys.clear(); if (document.pointerLockElement === canvas) document.exitPointerLock(); }
   else if (session.state === 'paused') { session.resume(); canvas.focus(); }
@@ -86,12 +90,12 @@ $('speed').addEventListener('input', event => { speed = +event.target.value; $('
 $('sensitivity').addEventListener('input', event => { sensitivity = +event.target.value; $('sens-value').textContent = sensitivity.toFixed(1) + '×'; });
 const motion = new MotionInput();
 let gyroGain = 1, reportCount = 0, reportWindow = 0, reportHz = 0, latestReport = null, staleShown = false;
-const usb = new ProGCC((report, now) => {
+function handleControllerReport(report, now) {
   const edge = motion.sample(report, now); latestReport = report; staleShown = false;
   reportCount++;
   if (!reportWindow) reportWindow = now;
   if (now - reportWindow >= 1000) { reportHz = Math.round(reportCount * 1000 / (now - reportWindow)); reportCount = 0; reportWindow = now; }
-  $('usb-status').textContent = 'Live ProGCC input'; $('input-mode').textContent = 'PROGCC USB';
+  $('usb-status').textContent = 'Live ' + controllerNames[controllerKind] + ' input' + (controllerKind === 'switchpro' ? ' · wired preview' : controllerKind === 'gamepad' ? ' · sticks/buttons only' : ''); $('input-mode').textContent = controllerNames[controllerKind].toUpperCase();
   if (edge.recenter) center();
   if (edge.pause) {
     const action = controllerSessionAction(session.state);
@@ -100,29 +104,47 @@ const usb = new ProGCC((report, now) => {
     return;
   }
   if (session.state !== 'running') return;
-  runInput = 'progcc';
+  runInput = controllerKind;
   // Experimental local-axis response, firmware gain already included in samples.
   // 2000 dps full-scale normalization is provisional until physically calibrated.
-  const scale = (2000 / 32768) * Math.PI / 180 * gyroGain * edge.dt;
+  const scale = (report.gyroDps ? 1 : 2000 / 32768) * Math.PI / 180 * gyroGain * edge.dt;
   yaw += report.gyro[$('yaw-axis').value] * scale * ($('invert-x').checked ? -1 : 1);
   pitch = Math.max(-1.3, Math.min(1.3, pitch + report.gyro.x * scale * ($('invert-y').checked ? -1 : 1)));
   yaw -= report.stickX * 2 * edge.dt;
+  pitch = Math.max(-1.3, Math.min(1.3, pitch + (report.stickY || 0) * 2 * edge.dt));
   if (edge.press) session.press(); if (edge.release) session.release();
   updateAim();
-}, message => {
+}
+function handleControllerStatus(message) {
   $('usb-status').textContent = message;
   if (!usb.device) {
     motion.reset(); latestReport = null; $('input-mode').textContent = 'MOUSE PREVIEW';
-    $('usb-data').textContent = 'No live controller input.'; $('connect').textContent = 'Connect ProGCC';
+    $('usb-data').textContent = 'No live controller input.'; $('connect').textContent = 'Connect ' + controllerNames[controllerKind];
     if (session.state === 'running') pause();
   }
+  controllerUI();
+}
+const adapters = {};
+for (const [kind, Adapter] of Object.entries({ progcc: ProGCC, switchpro: SwitchPro, gamepad: BrowserGamepad })) adapters[kind] = new Adapter((r,t) => { if (usb === adapters[kind]) handleControllerReport(r,t); }, message => { if (usb === adapters[kind]) handleControllerStatus(message); });
+usb = adapters.progcc;
+function controllerUI() {
+  $('connect').textContent = (usb.device ? 'Disconnect ' : 'Connect ') + controllerNames[controllerKind];
+  $('zero-motion').hidden = controllerKind !== 'switchpro';
+  $('zero-motion').disabled = !usb.device;
+  $('controller-note').textContent = controllerKind === 'switchpro' ? 'Original Switch Pro. Use a USB cable and desktop Chrome or Edge. Preview: check motion direction and buttons. Hold still, then use Zero motion if it drifts.' : controllerKind === 'gamepad' ? 'Standard browser buttons/sticks only. Press a controller button before connecting. Motion is unavailable in this mode.' : 'Connect your ProGCC for motion controls.';
+}
+$('controller-kind').addEventListener('change', async event => {
+  $('controller-kind').disabled = $('connect').disabled = true;
+  try { await usb.close(); controllerKind = event.target.value; usb = adapters[controllerKind]; motion.reset(); reportCount = reportHz = reportWindow = 0; latestReport = null; center(); controllerUI(); $('usb-status').textContent = 'Connect ' + controllerNames[controllerKind] + ' to begin.'; localStore.saveSettings(currentSettings()); }
+  finally { $('controller-kind').disabled = $('connect').disabled = false; }
 });
+$('zero-motion').addEventListener('click', async () => { $('zero-motion').disabled = true; try { $('usb-status').textContent = 'Hold the controller still…'; await usb.zeroMotion(); $('usb-status').textContent = 'Motion zeroed for this connection.'; } catch(error) { $('usb-status').textContent = error.message; } finally { $('zero-motion').disabled = !usb.device; } });
 $('connect').addEventListener('click', async () => {
   if (usb.device) { await usb.close(); return; }
-  $('connect').disabled = true; $('usb-status').textContent = 'Choose your ProGCC in the browser prompt…';
-  try { await usb.connect(); $('connect').textContent = 'Disconnect ProGCC'; }
+  $('connect').disabled = $('controller-kind').disabled = true; $('usb-status').textContent = 'Choose your ' + controllerNames[controllerKind] + ' in the browser prompt…';
+  try { await usb.connect(); controllerUI(); }
   catch (error) { $('usb-status').textContent = error.name === 'NotFoundError' ? 'No controller selected. Try Connect again.' : error.message; }
-  finally { $('connect').disabled = false; }
+  finally { $('connect').disabled = $('controller-kind').disabled = false; controllerUI(); }
 });
 $('gyro-gain').addEventListener('input', event => { gyroGain = +event.target.value; $('gyro-value').textContent = gyroGain.toFixed(1) + '×'; });
 function resetRoutine() {
@@ -201,13 +223,13 @@ function drawChargeRing() {
   $('ring-label').textContent = firing ? 'BURST' : amount >= 1 ? 'FULL CHARGE' : amount >= 0.5 ? 'SECOND CHARGE' : 'CHARGING';
 }
 const aimDirection = THREE ? new THREE.Vector3() : null, targetDirection = THREE ? new THREE.Vector3() : null;
-function resetInkAndLayout() { ink.reset(); shotSerial = burstShot = 0; layout = generateLayout(seed, field.count, radius, arcDegrees); chasePath = createChasePath(seed, arcDegrees); }
+function resetInkAndLayout() { ink.reset(); shooterSpread.reset(); shotSerial = burstShot = 0; layout = generateLayout(seed, field.count, radius, arcDegrees); chasePath = createChasePath(seed, arcDegrees); }
 const particle = THREE ? new THREE.Object3D() : null, particleForward = THREE ? new THREE.Vector3(0, 0, 1) : null;
 const inkForward = THREE ? new THREE.Vector3() : null, inkRight = THREE ? new THREE.Vector3() : null, inkUp = THREE ? new THREE.Vector3() : null;
 function emitInk() {
   if (session.weapon.fireFrame === 1) burstShot = 0;
   camera.getWorldDirection(inkForward); inkRight.set(1, 0, 0).applyQuaternion(camera.quaternion); inkUp.set(0, 1, 0).applyQuaternion(camera.quaternion);
-  const spread = shotSpread(seed, shotSerial++, burstShot++, weaponProfile);
+  const spread = shotSpread(seed, shotSerial++, burstShot++, weaponProfile, weaponProfile.family === 'shooter' ? shooterSpread.sample(simulationFrame, weaponProfile) : undefined);
   const direction = spreadDirection(inkForward.toArray(), inkRight.toArray(), inkUp.toArray(), spread);
   const origin = camera.position.clone().addScaledVector(inkRight, 0.12).addScaledVector(inkUp, -0.1).addScaledVector(inkForward, 0.25);
   const speed = (weaponProfile.family === 'shooter' ? weaponProfile.projectileSpeed : 1.05 + Math.min(1, session.weapon.charge * 2) * 1.05) * spread.speed;
@@ -327,7 +349,7 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 function currentSettings() {
-  return cleanSettings({ weapon: session.weaponId, routine, seed, arcDegrees, size: radius / 0.32, speed, sensitivity, gyroGain, yawAxis: $('yaw-axis').value, invertX: $('invert-x').checked, invertY: $('invert-y').checked, freshLayout: $('fresh-layout').checked });
+  return cleanSettings({ controller: controllerKind, weapon: session.weaponId, routine, seed, arcDegrees, size: radius / 0.32, speed, sensitivity, gyroGain, yawAxis: $('yaw-axis').value, invertX: $('invert-x').checked, invertY: $('invert-y').checked, freshLayout: $('fresh-layout').checked });
 }
 function renderHistory() {
   const list = $('history-list'); list.replaceChildren();
@@ -341,8 +363,9 @@ function renderHistory() {
   }
 }
 const saved = localStore.settings();
-for (const [id, key] of Object.entries({ weapon: 'weapon', routine: 'routine', seed: 'seed', size: 'size', 'target-arc': 'arcDegrees', speed: 'speed', sensitivity: 'sensitivity', 'gyro-gain': 'gyroGain', 'yaw-axis': 'yawAxis' })) $(id).value = saved[key];
+for (const [id, key] of Object.entries({ 'controller-kind': 'controller', weapon: 'weapon', routine: 'routine', seed: 'seed', size: 'size', 'target-arc': 'arcDegrees', speed: 'speed', sensitivity: 'sensitivity', 'gyro-gain': 'gyroGain', 'yaw-axis': 'yawAxis' })) $(id).value = saved[key];
 for (const [id, key] of Object.entries({ 'invert-x': 'invertX', 'invert-y': 'invertY', 'fresh-layout': 'freshLayout' })) $(id).checked = saved[key];
+controllerKind = saved.controller; usb = adapters[controllerKind]; controllerUI(); $('usb-status').textContent = 'Connect ' + controllerNames[controllerKind] + ' to begin.';
 session.setWeapon(saved.weapon); weaponProfile = WEAPONS[saved.weapon]; routine = saved.routine; seed = saved.seed; arcDegrees = saved.arcDegrees; radius = 0.32 * saved.size; speed = saved.speed; sensitivity = saved.sensitivity; gyroGain = saved.gyroGain;
 for (const item of targetMeshes) item.mesh.scale.setScalar(saved.size);
 for (const [id, value] of Object.entries({ 'size-value': saved.size, 'speed-value': speed, 'sens-value': sensitivity, 'gyro-value': gyroGain })) $(id).textContent = value.toFixed(1) + '×';

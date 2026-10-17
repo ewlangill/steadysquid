@@ -1,8 +1,10 @@
-import { random01 } from './random.js?v=4770694482d83370';
+import { random01 } from './random.js?v=0482bb7b6affff62';
 // Original approximation informed by each preset's spread limits; game RNG/bias is not reproduced.
-export function shotSpread(seed, serial, burstShot = serial, profile = { yaw: 3.3, pitch: 1.6, speedRandom: 0.12 }) {
-  const n = serial * 4, wide = random01(seed, n) < Math.min(0.3, 0.1 + burstShot * 0.02);
-  const radius = Math.sqrt(random01(seed, n + 1)) * (profile.family === 'shooter' || wide ? 1 : 0.4), angle = random01(seed, n + 2) * Math.PI * 2;
+export function shotSpread(seed, serial, burstShot = serial, profile = { yaw: 3.3, pitch: 1.6, speedRandom: 0.12 }, shooterBias) {
+  const n = serial * 4, shooter = profile.family === 'shooter';
+  const wideChance = shooter ? shooterBias ?? Math.min(0.3, (profile.biasMin ?? 0.01) + burstShot * (profile.biasStep ?? 0.01)) : Math.min(0.3, 0.1 + burstShot * 0.02);
+  const wide = random01(seed, n) < wideChance;
+  const radius = Math.sqrt(random01(seed, n + 1)) * (wide ? 1 : shooter ? 0.2 : 0.4), angle = random01(seed, n + 2) * Math.PI * 2;
   return { yaw: Math.cos(angle) * radius * profile.yaw * Math.PI / 180, pitch: Math.sin(angle) * radius * profile.pitch * Math.PI / 180,
     speed: 1 + (random01(seed, n + 3) * 2 - 1) * profile.speedRandom };
 }
@@ -48,5 +50,19 @@ export class InkCloud {
       if (drop.age < 90 && Math.abs(b[0]) < 25 && b[1] > -2 && b[1] < 20) survivors.push(drop);
     }
     this.drops = survivors; return impacts;
+  }
+}
+
+// Standing-only reconstruction: parameter bounds are sourced; mixture and ceiling are original.
+export class ShooterSpread {
+  reset() { this.bias = null; this.lastFrame = null; }
+  constructor() { this.reset(); }
+  sample(frame, profile) {
+    const minimum = profile.biasMin ?? 0.01;
+    if (this.bias === null) this.bias = minimum;
+    if (this.lastFrame !== null) this.bias = Math.max(minimum, this.bias - Math.max(0, frame - this.lastFrame - profile.repeatFrames) * (profile.biasRecovery ?? 0.005));
+    const chance = this.bias;
+    this.bias = Math.min(0.3, this.bias + (profile.biasStep ?? 0.01)); this.lastFrame = frame;
+    return chance;
   }
 }
