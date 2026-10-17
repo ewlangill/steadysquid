@@ -1,4 +1,5 @@
-import { random01 } from './random.js?v=1dbbb75483acd829';
+import { random01 } from './random.js?v=6e85ad94e5ae793e';
+import { advanceVelocity, damageAtAge } from './ballistics.js?v=6e85ad94e5ae793e';
 // Original approximation informed by each preset's spread limits; game RNG/bias is not reproduced.
 export function shotSpread(seed, serial, burstShot = serial, profile = { yaw: 3.3, pitch: 1.6, speedRandom: 0.12 }, shooterBias) {
   const n = serial * 4, shooter = profile.family === 'shooter';
@@ -23,31 +24,39 @@ export function segmentSphere(a, b, center, radius) {
 export class InkCloud {
   constructor(limit = 64) { this.limit = limit; this.reset(); }
   reset() { this.drops = []; this.splashes = []; this.serial = 0; }
-  launch(origin, direction, speed = 2.1, damage = 30) {
+  launch(origin, direction, speed = 2.1, damage = 30, spec = null) {
     if (this.drops.length >= this.limit) this.drops.shift();
-    this.drops.push({ id: this.serial++, position: [...origin], previous: [...origin], velocity: direction.map(v => v * speed), age: 0, damage });
+    this.drops.push({ id: this.serial++, position: [...origin], previous: [...origin], velocity: direction.map(v => v * speed), age: 0, damage, spec, distance: 0, hitTargets: new Set() });
   }
   step(targets, radius) {
     const impacts = [], survivors = [];
     this.splashes = this.splashes.filter(s => ++s.age < s.life);
     for (const drop of this.drops) {
-      const a = drop.position, b = a.map((v, i) => v + drop.velocity[i]); drop.previous = [...a]; drop.age++;
-      let best = null;
-      const offer = hit => { if (hit.t >= 0 && hit.t <= 1 && (!best || hit.t < best.t)) best = hit; };
-      targets.forEach((target, index) => { if (target.alive) { const t = segmentSphere(a, b, target.position, radius + 0.035); if (t !== null) offer({ t, index }); } });
+      const a = drop.position, stepLength = Math.hypot(...drop.velocity), left = Math.max(0, (drop.spec?.maxDistance ?? Infinity) - drop.distance);
+      const fraction = Math.min(1, left / stepLength), b = a.map((v, i) => v + drop.velocity[i] * fraction);
+      drop.previous = [...a]; drop.age++;
+      const candidates = [];
+      const offer = hit => { if (hit.t >= 0 && hit.t <= 1) candidates.push(hit); };
+      targets.forEach((target, index) => { if (target.alive && !drop.hitTargets.has(index)) { const t = segmentSphere(a, b, target.position, radius + (drop.spec?.radius ?? 0.035)); if (t !== null) offer({ t, index }); } });
       if (b[1] <= 0.03 && a[1] > 0.03) offer({ t: (0.03 - a[1]) / (b[1] - a[1]), index: -1, normal: [0, 1, 0] });
       if (b[2] <= -14.85 && a[2] > -14.85) offer({ t: (-14.85 - a[2]) / (b[2] - a[2]), index: -1, normal: [0, 0, 1] });
-      if (best) {
+      let stopped = false;
+      for (const best of candidates.sort((x, y) => x.t - y.t)) {
         const point = a.map((v, i) => v + (b[i] - v) * best.t);
         const normal = best.normal || point.map((v, i) => v - targets[best.index].position[i]);
         const length = Math.hypot(...normal) || 1;
         this.splashes.push({ point, normal: normal.map(v => v / length), age: 0, life: best.index < 0 ? 240 : 10, id: drop.id });
         if (this.splashes.length > 96) this.splashes.shift();
-        impacts.push({ index: best.index, point, id: drop.id, damage: drop.damage }); continue;
+        impacts.push({ index: best.index, point, id: drop.id, damage: damageAtAge(drop.damage, drop.age - 1 + best.t * fraction, drop.spec) });
+        if (best.index >= 0) drop.hitTargets.add(best.index);
+        if (best.index < 0 || !drop.spec?.pierce) { stopped = true; break; }
       }
+      if (stopped) continue;
       drop.position = b;
-      if (drop.age >= 8) { drop.velocity[0] *= 0.985; drop.velocity[2] *= 0.985; drop.velocity[1] -= 0.025; }
-      if (drop.age < 90 && Math.abs(b[0]) < 25 && b[1] > -2 && b[1] < 20) survivors.push(drop);
+      drop.distance += stepLength * fraction;
+      if (drop.spec) advanceVelocity(drop);
+      else if (drop.age >= 8) { drop.velocity[0] *= 0.985; drop.velocity[2] *= 0.985; drop.velocity[1] -= 0.025; }
+      if (fraction === 1 && drop.distance < (drop.spec?.maxDistance ?? Infinity) && drop.age < 90 && Math.abs(b[0]) < 25 && b[1] > -2 && b[1] < 20) survivors.push(drop);
     }
     this.drops = survivors; return impacts;
   }

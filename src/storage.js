@@ -1,5 +1,5 @@
-import { WEAPONS } from './weapons.js?v=1dbbb75483acd829';
-export const MODEL_VERSION = '2026-10-16-shooter-3';
+import { WEAPONS } from './weapons.js?v=6e85ad94e5ae793e';
+export const MODEL_VERSION = '2026-10-17-ballistics-4';
 const SETTINGS_KEY = 'steadysquid.settings.v1', HISTORY_KEY = 'steadysquid.history.v1';
 export const HISTORY_LIMIT = 50;
 export const DEFAULT_SETTINGS = Object.freeze({ controller: 'progcc', weapon: 'heavy', routine: 'smooth', seed: 1, arcDegrees: 120, size: 1, speed: 1, sensitivity: 1, gyroGain: 1, yawAxis: 'z', invertX: false, invertY: true, freshLayout: true });
@@ -14,7 +14,7 @@ export function cleanSettings(raw = {}) {
 }
 export function compatibilityKey(settings, input, modelVersion = MODEL_VERSION) { return JSON.stringify([modelVersion, cleanSettings(settings), ['progcc', 'switchpro', 'gamepad'].includes(input) ? input : 'mouse-keyboard']); }
 function cleanRun(raw) {
-  if (!raw || ![MODEL_VERSION, '2026-10-16-arc-2', '2026-10-16-preview-1'].includes(raw.modelVersion) || raw.complete !== true || typeof raw.finishedAt !== 'string' || !Number.isFinite(Date.parse(raw.finishedAt))) return null;
+  if (!raw || ![MODEL_VERSION, '2026-10-16-shooter-3', '2026-10-16-arc-2', '2026-10-16-preview-1'].includes(raw.modelVersion) || raw.complete !== true || typeof raw.finishedAt !== 'string' || !Number.isFinite(Date.parse(raw.finishedAt))) return null;
   const settings = cleanSettings(raw.settings), input = ['progcc', 'switchpro', 'gamepad'].includes(raw.input) ? raw.input : 'mouse-keyboard';
   const metrics = {};
   for (const key of ['tracking', 'firingTracking', 'angularError', 'shots', 'hits', 'pops', 'acquired', 'attempts', 'acquisitionMean']) {

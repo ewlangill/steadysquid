@@ -1,15 +1,16 @@
-import { createLocalStore, cleanSettings, MODEL_VERSION } from './storage.js?v=1dbbb75483acd829';
-import { WEAPONS, routineHint, projectileSpeed } from './weapons.js?v=1dbbb75483acd829';
-import { InkCloud, shotSpread, spreadDirection, ShooterSpread } from './ink.js?v=1dbbb75483acd829';
-import { generateLayout, targetPosition } from './layout.js?v=1dbbb75483acd829';
-import { createChasePath, chasePosition, targetEnabled } from './chase.js?v=1dbbb75483acd829';
-import { freshSeed } from './random.js?v=1dbbb75483acd829';
-import { TargetField } from './targets.js?v=1dbbb75483acd829';
-import { ROUTINES, drillTarget, Acquisition, targetCue } from './drills.js?v=1dbbb75483acd829';
-import { ProGCC, MotionInput, controllerSessionAction } from './progcc.js?v=1dbbb75483acd829';
-import { SwitchPro } from './switchpro.js?v=1dbbb75483acd829';
-import { BrowserGamepad } from './gamepad.js?v=1dbbb75483acd829';
-import { Session, summarizeFrames } from './engine.js?v=1dbbb75483acd829';
+import { createLocalStore, cleanSettings, MODEL_VERSION } from './storage.js?v=6e85ad94e5ae793e';
+import { WEAPONS, routineHint, projectileSpeed } from './weapons.js?v=6e85ad94e5ae793e';
+import { projectileSpec } from './ballistics.js?v=6e85ad94e5ae793e';
+import { InkCloud, shotSpread, spreadDirection, ShooterSpread } from './ink.js?v=6e85ad94e5ae793e';
+import { generateLayout, targetPosition } from './layout.js?v=6e85ad94e5ae793e';
+import { createChasePath, chasePosition, targetEnabled } from './chase.js?v=6e85ad94e5ae793e';
+import { freshSeed } from './random.js?v=6e85ad94e5ae793e';
+import { TargetField } from './targets.js?v=6e85ad94e5ae793e';
+import { ROUTINES, drillTarget, Acquisition, targetCue } from './drills.js?v=6e85ad94e5ae793e';
+import { ProGCC, MotionInput, controllerSessionAction } from './progcc.js?v=6e85ad94e5ae793e';
+import { SwitchPro } from './switchpro.js?v=6e85ad94e5ae793e';
+import { BrowserGamepad } from './gamepad.js?v=6e85ad94e5ae793e';
+import { Session, summarizeFrames } from './engine.js?v=6e85ad94e5ae793e';
 const $ = id => document.getElementById(id);
 const session = new Session();
 let controllerKind = 'progcc', usb;
@@ -188,8 +189,8 @@ function syncUI() {
   $('weapon-summary').textContent = weaponProfile.summary;
   $('keyboard-action').textContent = shooter ? 'hold to fire' : 'charge / release';
   canvas.setAttribute('aria-label', shooter ? 'Practice range. Arrow keys aim; hold Space to fire.' : 'Practice range. Arrow keys aim; hold Space to charge and release to fire.');
-  $('controller-controls').textContent = shooter ? 'Hold ZR to fire · Y recenter · Plus start / pause / resume.' : 'ZR charge / release · hold ZR during a burst to queue the next charge · Y recenter · Plus start / pause / resume.';
-  $('scoring-note').textContent = shooter ? 'Tracking while firing measures time the fire control is held, including startup. Shots landed counts projectile impacts.' : 'Charging time counts toward tracking, but is excluded from tracking while firing.';
+  $('controller-controls').textContent = weaponProfile.family === 'charger' ? 'ZR charge / release one shot · Y recenter · Plus start / pause / resume.' : shooter ? 'Hold ZR to fire · Y recenter · Plus start / pause / resume.' : 'ZR charge / release · hold ZR during a burst to queue the next charge · Y recenter · Plus start / pause / resume.';
+  $('scoring-note').textContent = weaponProfile.family === 'charger' ? 'Shots landed counts impacts. Full-charge shots can hit more than one target. Charging is excluded from firing time.' : shooter ? 'Tracking while firing measures time the fire control is held, including startup. Shots landed counts projectile impacts.' : 'Charging time counts toward tracking, but is excluded from tracking while firing.';
   $('charge-hint').textContent = shooter ? (usb.device ? 'HOLD ZR TO FIRE · RELEASE TO STOP' : 'HOLD SPACE OR LEFT MOUSE TO FIRE') : firing ? 'KEEP AIMING WHILE FIRING' : weapon.phase === 'charging' ? 'RELEASE TO FIRE' : session.state === 'complete' ? 'RESTART TO TRY AGAIN' : usb.device ? 'HOLD ZR TO CHARGE · RELEASE TO FIRE' : 'HOLD SPACE OR LEFT MOUSE TO CHARGE';
   if (session.state === 'complete' && !runSaved) {
     runSaved = true;
@@ -212,10 +213,12 @@ function syncUI() {
 function drawChargeRing() {
   const weapon = session.weapon, firing = weapon.phase === 'firing';
   const amount = firing ? weapon.remaining / (weaponProfile.fullBurstFrames / 60) : weapon.charge;
-  const visible = weaponProfile.family === 'splatling' && session.state === 'running' && ['charging', 'firing'].includes(weapon.phase);
+  const charger = weaponProfile.family === 'charger';
+  $('charge-reticle').classList.toggle('charger', charger);
+  const visible = weaponProfile.family !== 'shooter' && session.state === 'running' && ['charging', 'firing'].includes(weapon.phase);
   $('charge-reticle').hidden = !visible;
   if (!visible) return;
-  $('charge-inner').style.strokeDashoffset = 100 * (1 - Math.min(1, amount * 2));
+  $('charge-inner').style.strokeDashoffset = 100 * (1 - Math.min(1, amount * (charger ? 1 : 2)));
   $('charge-outer').style.strokeDashoffset = 100 * (1 - Math.max(0, Math.min(1, (amount - 0.5) * 2)));
   $('charge-reticle').classList.toggle('discharging', firing);
   $('charge-reticle').classList.toggle('full', !firing && amount >= 1);
@@ -230,9 +233,10 @@ function emitInk() {
   camera.getWorldDirection(inkForward); inkRight.set(1, 0, 0).applyQuaternion(camera.quaternion); inkUp.set(0, 1, 0).applyQuaternion(camera.quaternion);
   const spread = shotSpread(seed, shotSerial++, burstShot++, weaponProfile, weaponProfile.family === 'shooter' ? shooterSpread.sample(simulationFrame, weaponProfile) : undefined);
   const direction = spreadDirection(inkForward.toArray(), inkRight.toArray(), inkUp.toArray(), spread);
-  const origin = camera.position.clone().addScaledVector(inkRight, 0.12).addScaledVector(inkUp, -0.1).addScaledVector(inkForward, 0.25);
-  const speed = projectileSpeed(weaponProfile, session.weapon.charge) * spread.speed;
-  ink.launch(origin.toArray(), direction, speed, weaponProfile.damage);
+  const charger = weaponProfile.family === 'charger', charge = charger ? session.lastShotCharge : session.weapon.charge;
+  const origin = camera.position.clone().addScaledVector(inkRight, charger ? 0 : 0.12).addScaledVector(inkUp, charger ? 0 : -0.1).addScaledVector(inkForward, 0.25);
+  const spec = projectileSpec(session.weaponId, charge), speed = projectileSpeed(weaponProfile, charge) * spread.speed;
+  ink.launch(origin.toArray(), direction, speed, spec.damage ?? weaponProfile.damage, spec);
 }
 function drawInk() {
   let count = 0;
@@ -241,7 +245,7 @@ function drawInk() {
     for (let trail = 0; trail < 3; trail++) {
       const f = 1 - trail * 0.22;
       particle.position.fromArray(drop.previous).lerp(inkRight.fromArray(drop.position), f);
-      particle.scale.set(0.06 - trail * 0.012, 0.05 - trail * 0.01, 0.19 - trail * 0.04); particle.updateMatrix(); inkMesh.setMatrixAt(count++, particle.matrix);
+      particle.scale.set(0.06 - trail * 0.012, 0.05 - trail * 0.01, drop.spec?.charger ? 0.9 - trail * 0.15 : 0.19 - trail * 0.04); particle.updateMatrix(); inkMesh.setMatrixAt(count++, particle.matrix);
     }
   }
   inkMesh.count = count; inkMesh.instanceMatrix.needsUpdate = true;

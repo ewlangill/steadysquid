@@ -1,4 +1,4 @@
-import { WEAPONS } from './weapons.js?v=1dbbb75483acd829';
+import { WEAPONS } from './weapons.js?v=6e85ad94e5ae793e';
 export const SESSION_SECONDS = 60;
 export class Splatling {
   constructor(profile = WEAPONS.heavy) { this.profile = profile; this.reset(); }
@@ -56,10 +56,31 @@ export class Shooter {
     return { shots, firingSeconds: firingFrames / 60 };
   }
 }
+export class Charger {
+  constructor(profile = WEAPONS.splatcharger) { this.profile = profile; this.reset(); }
+  reset() { this.phase = 'idle'; this.held = false; this.charge = 0; this.chargeFrames = 0; this.shotCharge = 0; this.remaining = 0; this.fireFrame = 0; this.fraction = 0; }
+  press() { if (this.held) return; this.held = true; if (this.phase === 'idle') { this.phase = 'charging'; this.chargeFrames = 0; this.charge = 0; } }
+  release() { this.held = false; }
+  step(dt) {
+    if (!Number.isFinite(dt) || dt <= 0) return { shots: 0, firingSeconds: 0 };
+    this.fraction += dt * 60; const ticks = Math.floor(this.fraction + 1e-9); this.fraction = Math.max(0, this.fraction - ticks);
+    let shots = 0;
+    for (let i = 0; i < ticks; i++) {
+      if (this.phase === 'firing') { this.phase = this.held ? 'charging' : 'idle'; this.chargeFrames = 0; this.charge = 0; }
+      if (this.phase !== 'charging') continue;
+      if (this.held || this.chargeFrames < this.profile.minChargeFrames) this.chargeFrames = Math.min(this.profile.fullChargeFrames, this.chargeFrames + 1);
+      this.charge = this.chargeFrames / this.profile.fullChargeFrames;
+      if (!this.held && this.chargeFrames >= this.profile.minChargeFrames) {
+        this.shotCharge = this.charge; this.phase = 'firing'; this.fireFrame++; shots++;
+      }
+    }
+    return { shots, firingSeconds: shots / 60 };
+  }
+}
 export class Session {
   constructor(weaponId = 'heavy') { this.setWeapon(weaponId); }
-  setWeapon(id) { this.weaponId = Object.hasOwn(WEAPONS, id) ? id : 'heavy'; this.weapon = WEAPONS[this.weaponId].family === 'splatling' ? new Splatling(WEAPONS[this.weaponId]) : new Shooter(WEAPONS[this.weaponId]); this.reset(); }
-  reset() { this.elapsed = 0; this.onTarget = 0; this.fireTime = 0; this.fireOnTarget = 0; this.errorSum = 0; this.shots = 0; this.hits = 0; this.state = 'ready'; this.weapon.reset(); }
+  setWeapon(id) { this.weaponId = Object.hasOwn(WEAPONS, id) ? id : 'heavy'; const p = WEAPONS[this.weaponId]; this.weapon = p.family === 'splatling' ? new Splatling(p) : p.family === 'charger' ? new Charger(p) : new Shooter(p); this.reset(); }
+  reset() { this.elapsed = 0; this.onTarget = 0; this.fireTime = 0; this.fireOnTarget = 0; this.errorSum = 0; this.shots = 0; this.hits = 0; this.lastShotCharge = 0; this.state = 'ready'; this.weapon.reset(); }
   start() { this.reset(); this.state = 'running'; }
   pause() { if (this.state === 'running') { this.state = 'paused'; this.weapon.reset(); } }
   resume() { if (this.state === 'paused') this.state = 'running'; }
@@ -74,6 +95,7 @@ export class Session {
     this.fireTime += fire.firingSeconds;
     this.fireOnTarget += onTarget ? fire.firingSeconds : 0;
     this.errorSum += (Number.isFinite(angularError) ? Math.max(0, angularError) : 0) * dt;
+    if (fire.shots) this.lastShotCharge = this.weapon.shotCharge ?? this.weapon.charge;
     this.shots += fire.shots;
     this.hits += scoreInstantHits && onTarget ? fire.shots : 0;
     if (this.elapsed >= SESSION_SECONDS - 1e-9) { this.state = 'complete'; this.weapon.reset(); }
