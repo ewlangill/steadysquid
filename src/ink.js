@@ -1,5 +1,5 @@
-import { random01 } from './random.js?v=2bdd81189711b5a6';
-import { advanceVelocity, damageAtAge } from './ballistics.js?v=2bdd81189711b5a6';
+import { random01 } from './random.js?v=180507d78bae5fef';
+import { advanceVelocity, damageAtAge } from './ballistics.js?v=180507d78bae5fef';
 // Original approximation informed by each preset's spread limits; game RNG/bias is not reproduced.
 export function shotSpread(seed, serial, burstShot = serial, profile = { yaw: 3.3, pitch: 1.6, speedRandom: 0.12 }, shooterBias) {
   const n = serial * 4, shooter = profile.family === 'shooter';
@@ -38,16 +38,23 @@ export class InkCloud {
       const candidates = [];
       const offer = hit => { if (hit.t >= 0 && hit.t <= 1) candidates.push(hit); };
       targets.forEach((target, index) => { if (target.alive && !drop.hitTargets.has(index)) { const t = segmentSphere(a, b, target.position, radius + (drop.spec?.radius ?? 0.035)); if (t !== null) offer({ t, index }); } });
-      if (b[1] <= 0.03 && a[1] > 0.03) offer({ t: (0.03 - a[1]) / (b[1] - a[1]), index: -1, normal: [0, 1, 0] });
-      if (b[2] <= -14.85 && a[2] > -14.85) offer({ t: (-14.85 - a[2]) / (b[2] - a[2]), index: -1, normal: [0, 0, 1] });
+      const fieldRadius = drop.spec?.fieldRadius, field = Number.isFinite(fieldRadius) && fieldRadius >= 0;
+      const floorY = field ? fieldRadius : 0.03, wallZ = field ? -15 + fieldRadius : -14.85;
+      if (field && a[1] <= floorY) offer({ t: 0, index: -1, normal: [0, 1, 0] });
+      else if (b[1] <= floorY && a[1] > floorY) offer({ t: (floorY - a[1]) / (b[1] - a[1]), index: -1, normal: [0, 1, 0] });
+      if (field && a[2] <= wallZ) offer({ t: 0, index: -1, normal: [0, 0, 1] });
+      else if (b[2] <= wallZ && a[2] > wallZ) offer({ t: (wallZ - a[2]) / (b[2] - a[2]), index: -1, normal: [0, 0, 1] });
       let stopped = false;
       for (const best of candidates.sort((x, y) => x.t - y.t)) {
         const point = a.map((v, i) => v + (b[i] - v) * best.t);
         const normal = best.normal || point.map((v, i) => v - targets[best.index].position[i]);
         const length = Math.hypot(...normal) || 1;
-        this.splashes.push({ point, normal: normal.map(v => v / length), age: 0, life: best.index < 0 ? 240 : 10, id: drop.id });
+        // Environment collision sweeps the projectile center; paint belongs on the surface.
+        const contact = field && best.index < 0 ? point.map((v, i) => v - normal[i] * fieldRadius) : point;
+        if (field && best.index < 0) contact[best.normal[1] ? 1 : 2] = best.normal[1] ? 0 : -15;
+        this.splashes.push({ point: contact, normal: normal.map(v => v / length), age: 0, life: best.index < 0 ? 240 : 10, id: drop.id });
         if (this.splashes.length > 96) this.splashes.shift();
-        impacts.push({ index: best.index, point, id: drop.id, damage: damageAtAge(drop.damage, drop.age - 1 + best.t * fraction, drop.spec) });
+        impacts.push({ index: best.index, point: contact, id: drop.id, damage: damageAtAge(drop.damage, drop.age - 1 + best.t * fraction, drop.spec) });
         if (best.index >= 0) drop.hitTargets.add(best.index);
         if (best.index < 0 || !drop.spec?.pierce) { stopped = true; break; }
       }

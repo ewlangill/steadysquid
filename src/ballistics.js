@@ -14,7 +14,7 @@ export function projectileSpec(id, charge = 1) {
       maxDistance: 9.033 + t * (24.037 - 9.033), pierce: charge >= 1, radius: 0.125, charger: true,
       damage: charge >= 1 ? 160 : 40 + t * 40 };
   }
-  if (id === 'heavy') return { ...profiles.heavy, radius: 0.225,
+  if (id === 'heavy') return { ...profiles.heavy, radius: 0.225, fieldRadius: 0.2,
     brakeGravity: 0.07, freeGravity: 0.016, brakeDrag: 0.64, freeDrag: 0.98,
     freeHorizontalSpeed: 0.2355, freeVerticalSpeed: -0.15 };
   return { ...profiles[id], gravity: 0.016, brakeDrag: 0.64, freeDrag: 0.98, freeSpeed: 0.12 };

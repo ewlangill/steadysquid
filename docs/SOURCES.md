@@ -113,3 +113,12 @@ This nominal trajectory is consistent with the Heavy-specific Inkipedia descript
 [^heavy-draft]: [XarrotD's Inkipedia data-explanation draft: Trajectory](https://splatoonwiki.org/wiki/User:XarrotD/Data_Explanation#Trajectory), inspected October 18, 2026. Explicitly draft/incomplete community analysis; lower-trust for unspecified defaults.
 [^heavy-phases]: Community [Splatoon 3 system research: projectile speed/range](https://wikiwiki.jp/splatoon3mix/システム詳細仕様#bullet_speed) and [parameter notes](https://wikiwiki.jp/splatoon3mix/検証/パラメータ情報). These may share prior research with Inkipedia and are not independent engine verification.
 [^heavy-wiki]: Community [Inkipedia: Heavy Splatling, Splatoon 3](https://splatoonwiki.org/wiki/Heavy_Splatling#Splatoon_3).
+
+
+## Heavy environment collision — October 18, 2026
+
+The same pinned v11.3 Heavy extraction explicitly supplies `InitRadiusForField` and `EndRadiusForField` of 0.2, separately from player radius 0.225.[^heavy-record] Heavy now sweeps that field radius against the trainer floor/wall, stops initially overlapping shots, and places splats on the actual plane rather than at the projectile center. Other presets retain their prior contacts. This is a source-backed radius and an original plane-collision implementation; it does not verify game geometry, muzzle/world scale or full paint physics.
+
+Further scale research found Inkipedia's statement that Splatoon 3 practice lines are five internal units apart, versus fifty in Splatoon 2.[^distance-followup] This is community evidence; no game-scale/FOV change was made. The trainer's back wall remains at 15 nominal units and the usual target layout is 6.5–12, so the current range cannot establish Heavy's full-distance behavior. Exact speed-RNG semantics remain unresolved; no new RNG formula was inferred from parameter names.
+
+[^distance-followup]: Community [Inkipedia: Distance unit](https://splatoonwiki.org/wiki/Distance_unit), inspected October 18, 2026. Its naming is marked conjectural; it cites Japanese community research for the scale comparison.
