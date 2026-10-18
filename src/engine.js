@@ -1,8 +1,8 @@
-import { WEAPONS } from './weapons.js?v=e15bb36e212e9d5e';
+import { WEAPONS } from './weapons.js?v=d9185c8df1f1c09e';
 export const SESSION_SECONDS = 60;
 export class Splatling {
   constructor(profile = WEAPONS.heavy) { this.profile = profile; this.reset(); }
-  reset() { this.phase = 'idle'; this.charge = 0; this.remaining = 0; this.chargeFrames = 0; this.burstFrames = 0; this.fireFrame = 0; this.fraction = 0; this.held = false; }
+  reset() { this.phase = 'idle'; this.charge = 0; this.remaining = 0; this.chargeFrames = 0; this.shotCharge = 0; this.burstFrames = 0; this.fireFrame = 0; this.fraction = 0; this.held = false; }
   beginCharge() { this.phase = 'charging'; this.charge = 0; this.chargeFrames = 0; this.remaining = 0; }
   press() { this.held = true; if (this.phase === 'idle') this.beginCharge(); }
   release() {
@@ -23,7 +23,8 @@ export class Splatling {
         this.chargeFrames = Math.min(p.fullChargeFrames, this.chargeFrames + 1);
         this.charge = this.chargeFrames <= p.firstChargeFrames ? this.chargeFrames / p.firstChargeFrames * 0.5 : 0.5 + (this.chargeFrames - p.firstChargeFrames) / (p.fullChargeFrames - p.firstChargeFrames) * 0.5;
       } else if (this.phase === 'firing') {
-        if (this.fireFrame % this.profile.shotIntervalFrames === 0) shots++;
+        // Capture before the last burst tick clears charge or queues another charge.
+        if (this.fireFrame % this.profile.shotIntervalFrames === 0) { this.shotCharge = this.charge; shots++; }
         this.fireFrame++; firingFrames++; this.burstFrames--;
         this.remaining = this.burstFrames / 60;
         if (this.burstFrames <= 0) { this.phase = 'idle'; this.charge = 0; if (this.held) this.beginCharge(); }

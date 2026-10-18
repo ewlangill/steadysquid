@@ -94,3 +94,8 @@ The trainer now separates gyro and stick gain, defaults motion-capable controlle
 Five-second Input check uses only fresh report-time intervals and retains aggregate requested gyro/stick angles in memory. It rejects insufficient coverage and invalidates on changed settings/recenter/disconnect or a drill start. No raw samples are stored/uploaded and no controller configuration is written. Angles are before the camera pitch clamp and remain subject to provisional input scaling; this is a calibration aid, not a hardware/game match measurement. Exact sensitivity conversion, acceleration/filtering, orientation-aware gyro, FOV and third-person/recenter behavior remain pending research.
 
 [^input-options]: Community [Inkipedia: Splatoon 3 options](https://splatoonwiki.org/wiki/Options#Splatoon_3).
+
+
+## Charged-shot payload consistency — October 18, 2026
+
+The trainer now captures each splatling shot's charge before discharge completion clears it, and launches from the retained Session payload. This fixes zero-charge launch speed on terminal partial-burst shots and preserves charged shots on the final round tick. It is an internal implementation correction, not new evidence for game gravity, drag, launch-scale or sensitivity equivalence. Existing parameter references and approximation limits above still apply.
