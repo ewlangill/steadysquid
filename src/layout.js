@@ -1,4 +1,4 @@
-import { random01 } from './random.js?v=d9185c8df1f1c09e';
+import { random01 } from './random.js?v=2bdd81189711b5a6';
 export const DEFAULT_ARC_DEGREES = 120;
 export function generateLayout(seed, count = 5, radius = 0.32, arcDegrees = DEFAULT_ARC_DEGREES) {
   const arc = Math.max(20, Math.min(180, Number.isFinite(arcDegrees) ? arcDegrees : DEFAULT_ARC_DEGREES)) * Math.PI / 180;

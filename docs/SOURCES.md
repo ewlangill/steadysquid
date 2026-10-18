@@ -99,3 +99,17 @@ Five-second Input check uses only fresh report-time intervals and retains aggreg
 ## Charged-shot payload consistency — October 18, 2026
 
 The trainer now captures each splatling shot's charge before discharge completion clears it, and launches from the retained Session payload. This fixes zero-charge launch speed on terminal partial-burst shots and preserves charged shots on the final round tick. It is an internal implementation correction, not new evidence for game gravity, drag, launch-scale or sensitivity equivalence. Existing parameter references and approximation limits above still apply.
+
+
+## Heavy Splatling trajectory refinement — October 18, 2026
+
+Heavy alone now uses distinct brake/free phases. Its existing v11.3 record directly supports the eight-frame straight segment, 1.5105 transition cap, 1.05–2.1 launch endpoints and 11–19-frame damage endpoints. It also explicitly provides player collision radius 0.225 (initial and final); this replaces the trainer's generic 0.035 target-hit radius for Heavy.[^heavy-record] Target spheres remain practice geometry; environment collision radius is not reconstructed.
+
+New phase defaults are a **community reconstruction**, not independently verified inherited engine defaults. Inkipedia's mechanics draft describes 36% braking resistance with 0.07 gravity, then 2% resistance and 0.016 gravity.[^heavy-draft] The Splatoon 3 research wiki describes separate horizontal/downward transition thresholds and clamping on the crossing frame; its parameter notes list defaults 0.2355 and −0.15.[^heavy-phases] Heavy applies these defaults after the unchanged straight segment: cap velocity, multiply by 0.64, subtract braking gravity; after both component thresholds are reached, subsequent updates use 0.98 and free gravity. Horizontal motion can keep braking while an upward shot waits to descend. This replaces Heavy's total-speed 0.12 switch and shared 0.016 gravity. Other weapon paths retain their previous approximation.
+
+This nominal trajectory is consistent with the Heavy-specific Inkipedia description of its straight segment and cap.[^heavy-wiki] Its exact frame ordering, threshold inheritance, launch-speed RNG/charge interpolation, damage interpolation, muzzle/camera/world scale and moving/jumping behavior still need game comparison. No Splatoon 2 numeric parameter was substituted in this pass. Damage falloff remains independent of trajectory state.
+
+[^heavy-record]: Community-extracted primary [pinned Splatoon 3 v11.3 Heavy record](https://github.com/Leanny/splat3/blob/7280ff9cde8bb1c5dcef46c700c326471584d2e6/data/parameter/1130/weapon/WeaponSpinnerStandard.game__GameParameterTable.json), SHA-256 `92647d586beee1764ca8984820fa37e0fd7887e2a756f7ca18e10e1aef97fd08`. Not a Nintendo specification.
+[^heavy-draft]: [XarrotD's Inkipedia data-explanation draft: Trajectory](https://splatoonwiki.org/wiki/User:XarrotD/Data_Explanation#Trajectory), inspected October 18, 2026. Explicitly draft/incomplete community analysis; lower-trust for unspecified defaults.
+[^heavy-phases]: Community [Splatoon 3 system research: projectile speed/range](https://wikiwiki.jp/splatoon3mix/システム詳細仕様#bullet_speed) and [parameter notes](https://wikiwiki.jp/splatoon3mix/検証/パラメータ情報). These may share prior research with Inkipedia and are not independent engine verification.
+[^heavy-wiki]: Community [Inkipedia: Heavy Splatling, Splatoon 3](https://splatoonwiki.org/wiki/Heavy_Splatling#Splatoon_3).
