@@ -1,13 +1,20 @@
-import { random01 } from './random.js?v=180507d78bae5fef';
-import { advanceVelocity, damageAtAge } from './ballistics.js?v=180507d78bae5fef';
-// Original approximation informed by each preset's spread limits; game RNG/bias is not reproduced.
+import { random01 } from './random.js?v=67f79a923d304cb2';
+import { advanceVelocity, damageAtAge } from './ballistics.js?v=67f79a923d304cb2';
+// Spread remains approximate. Heavy speed uses a community-reconstructed bias curve; see SOURCES.md.
 export function shotSpread(seed, serial, burstShot = serial, profile = { yaw: 3.3, pitch: 1.6, speedRandom: 0.12 }, shooterBias) {
   const n = serial * 4, shooter = profile.family === 'shooter';
   const wideChance = shooter ? shooterBias ?? Math.min(0.3, (profile.biasMin ?? 0.01) + burstShot * (profile.biasStep ?? 0.01)) : Math.min(0.3, 0.1 + burstShot * 0.02);
   const wide = random01(seed, n) < wideChance;
   const radius = Math.sqrt(random01(seed, n + 1)) * (wide ? 1 : shooter ? 0.2 : 0.4), angle = random01(seed, n + 2) * Math.PI * 2;
   return { yaw: Math.cos(angle) * radius * profile.yaw * Math.PI / 180, pitch: Math.sin(angle) * radius * profile.pitch * Math.PI / 180,
-    speed: 1 + (random01(seed, n + 3) * 2 - 1) * profile.speedRandom };
+    speed: speedVariation(random01(seed, n + 3), profile) };
+}
+// Preserve the seeded stream and legacy presets. Bias shapes magnitude, not its bounds.
+function speedVariation(sample, profile) {
+  const signed = sample * 2 - 1;
+  const deviation = profile.speedRandomBias === undefined ? signed
+    : Math.sign(signed) * Math.abs(signed) ** (Math.log(profile.speedRandomBias) / Math.log(0.5));
+  return 1 + deviation * profile.speedRandom;
 }
 export function spreadDirection(forward, right, up, spread) {
   const out = forward.map((v, i) => v + right[i] * Math.tan(spread.yaw) + up[i] * Math.tan(spread.pitch));

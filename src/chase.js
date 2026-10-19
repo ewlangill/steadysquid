@@ -1,4 +1,4 @@
-import { random01 } from './random.js?v=180507d78bae5fef';
+import { random01 } from './random.js?v=67f79a923d304cb2';
 // Original tracking motion, not extracted Splatoon player physics.
 const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 const ramp = 0.12;

@@ -1,4 +1,4 @@
-import { WEAPONS } from './weapons.js?v=180507d78bae5fef';
+import { WEAPONS } from './weapons.js?v=67f79a923d304cb2';
 export const SESSION_SECONDS = 60;
 export class Splatling {
   constructor(profile = WEAPONS.heavy) { this.profile = profile; this.reset(); }

@@ -122,3 +122,11 @@ The same pinned v11.3 Heavy extraction explicitly supplies `InitRadiusForField` 
 Further scale research found Inkipedia's statement that Splatoon 3 practice lines are five internal units apart, versus fifty in Splatoon 2.[^distance-followup] This is community evidence; no game-scale/FOV change was made. The trainer's back wall remains at 15 nominal units and the usual target layout is 6.5–12, so the current range cannot establish Heavy's full-distance behavior. Exact speed-RNG semantics remain unresolved; no new RNG formula was inferred from parameter names.
 
 [^distance-followup]: Community [Inkipedia: Distance unit](https://splatoonwiki.org/wiki/Distance_unit), inspected October 18, 2026. Its naming is marked conjectural; it cites Japanese community research for the scale comparison.
+
+## Heavy launch-speed distribution — October 19, 2026
+
+New Splatoon 3-specific author research supplies an explicit signed power curve for speed variation, beyond the earlier draft's “presumably”.[^heavy-rng-author] Heavy now uses `sign(2u−1) × |2u−1|^(log(b)/log(0.5))`, multiplied by the extracted rate, around nominal speed. The pinned record supplies bias 0.2 and rate 0.12.[^heavy-record] This retains ±12% limits while concentrating speeds near nominal; median absolute variation is 2.4%, versus the previous uniform 6%.
+
+This is a lower-trust community reconstruction, not independently verified Nintendo RNG/code. The seeded generator remains original. Only Heavy speed sampling changes; angular mixture, charge interpolation, other presets and phase constants stay as before. No console/FOV/muzzle equivalence is established. The no-randomness diagnostic remains nominal; regenerated baseline identity does not constitute new measurement.
+
+[^heavy-rng-author]: Primary author [かなもじ: Splatoon 3 projectile accuracy #10, splatling program construction](https://note.com/kanamoji_1027/n/n4de8b03535de), November 6, 2024, inspected October 19, 2026. Describes center-biased signed speed variation and cites another researcher's trajectory video. Community analysis; no independently reproduced console distribution in this project.
