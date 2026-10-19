@@ -1,8 +1,14 @@
-import { random01 } from './random.js?v=67f79a923d304cb2';
-import { advanceVelocity, damageAtAge } from './ballistics.js?v=67f79a923d304cb2';
-// Spread remains approximate. Heavy speed uses a community-reconstructed bias curve; see SOURCES.md.
+import { random01 } from './random.js?v=93b6d62bd518957c';
+import { advanceVelocity, damageAtAge } from './ballistics.js?v=93b6d62bd518957c';
+// Heavy uses community-reconstructed per-axis bias curves; other spread remains approximate. See SOURCES.md.
 export function shotSpread(seed, serial, burstShot = serial, profile = { yaw: 3.3, pitch: 1.6, speedRandom: 0.12 }, shooterBias) {
   const n = serial * 4, shooter = profile.family === 'shooter';
+  if (profile.angularModel === 'splatling-power') {
+    // Per-axis community reconstruction: no shooter-like burst widening for Heavy.
+    return { yaw: biasedSigned(random01(seed, n), profile.yawBias) * profile.yaw * Math.PI / 180,
+      pitch: biasedSigned(random01(seed, n + 1), profile.pitchBias) * profile.pitch * Math.PI / 180,
+      speed: speedVariation(random01(seed, n + 3), profile) };
+  }
   const wideChance = shooter ? shooterBias ?? Math.min(0.3, (profile.biasMin ?? 0.01) + burstShot * (profile.biasStep ?? 0.01)) : Math.min(0.3, 0.1 + burstShot * 0.02);
   const wide = random01(seed, n) < wideChance;
   const radius = Math.sqrt(random01(seed, n + 1)) * (wide ? 1 : shooter ? 0.2 : 0.4), angle = random01(seed, n + 2) * Math.PI * 2;
@@ -10,10 +16,12 @@ export function shotSpread(seed, serial, burstShot = serial, profile = { yaw: 3.
     speed: speedVariation(random01(seed, n + 3), profile) };
 }
 // Preserve the seeded stream and legacy presets. Bias shapes magnitude, not its bounds.
-function speedVariation(sample, profile) {
+function biasedSigned(sample, bias) {
   const signed = sample * 2 - 1;
-  const deviation = profile.speedRandomBias === undefined ? signed
-    : Math.sign(signed) * Math.abs(signed) ** (Math.log(profile.speedRandomBias) / Math.log(0.5));
+  return Math.sign(signed) * Math.abs(signed) ** (Math.log(bias) / Math.log(0.5));
+}
+function speedVariation(sample, profile) {
+  const deviation = profile.speedRandomBias === undefined ? sample * 2 - 1 : biasedSigned(sample, profile.speedRandomBias);
   return 1 + deviation * profile.speedRandom;
 }
 export function spreadDirection(forward, right, up, spread) {

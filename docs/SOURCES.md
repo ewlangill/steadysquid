@@ -130,3 +130,14 @@ New Splatoon 3-specific author research supplies an explicit signed power curve 
 This is a lower-trust community reconstruction, not independently verified Nintendo RNG/code. The seeded generator remains original. Only Heavy speed sampling changes; angular mixture, charge interpolation, other presets and phase constants stay as before. No console/FOV/muzzle equivalence is established. The no-randomness diagnostic remains nominal; regenerated baseline identity does not constitute new measurement.
 
 [^heavy-rng-author]: Primary author [かなもじ: Splatoon 3 projectile accuracy #10, splatling program construction](https://note.com/kanamoji_1027/n/n4de8b03535de), November 6, 2024, inspected October 19, 2026. Describes center-biased signed speed variation and cites another researcher's trajectory video. Community analysis; no independently reproduced console distribution in this project.
+
+## Heavy angular spread and original research follow-up — October 19, 2026
+
+The Splatoon 3 author analysis describes separate signed power curves for yaw/pitch and steady splatling bias, unlike shooter widening.[^heavy-rng-author] Heavy now uses yaw/pitch limits 3.3°/1.6° and fixed biases .3/.4. This removes the trainer's increasing outer-cone chance and correlated ellipse for Heavy. Seeded per-axis samples are original; their independence and exact game RNG remain unverified. Mini/shooters retain prior sampling.
+
+The underlying July 17, 2024 researcher video states “スピナーはブレ補正が増減せず” (our translation: splatling bias does not increase/decrease).[^heavy-original-video] Around 1:09–2:59 it explicitly treats vertical/speed bias as suspected and difficult to establish from footage. Auto-generated Japanese captions were consulted, contain transcription errors, and do not verify numeric values. This strengthens provenance, not console validation.
+
+Sendou's Heavy table matches the inspected Lean record's speed bias/rate .2/.12, pitch bias .4, standing maximum .3 and angle limits; its standing minimum .1 alone does not establish first-shot behavior.[^heavy-sendou] It credits Lean, so this is the same data lineage, not independent extraction evidence. The fixed .3 interpretation follows community analysis. Charge interpolation, camera-relative angle projection and scale remain approximations.
+
+[^heavy-original-video]: Primary community researcher つー / CCOPEDIA, [Splatling horizontal, vertical and launch-speed deviation](https://www.youtube.com/watch?v=vqCSszcA6bw), July 17, 2024, especially 1:09–2:59. Its linked [Desmos trajectory reconstruction](https://www.desmos.com/calculator/jdihiqoma6) was inspected as mathematics; no upstream program was copied.
+[^heavy-sendou]: [Sendou: Heavy Splatling parameters](https://sendou.ink/params/heavy-splatling), inspected October 19, 2026. Community display; “Data credit: Lean.”
