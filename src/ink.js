@@ -1,11 +1,11 @@
-import { random01 } from './random.js?v=93b6d62bd518957c';
-import { advanceVelocity, damageAtAge } from './ballistics.js?v=93b6d62bd518957c';
+import { random01 } from './random.js?v=7c33641f3adbf0dc';
+import { advanceVelocity, damageAtAge } from './ballistics.js?v=7c33641f3adbf0dc';
 // Heavy uses community-reconstructed per-axis bias curves; other spread remains approximate. See SOURCES.md.
 export function shotSpread(seed, serial, burstShot = serial, profile = { yaw: 3.3, pitch: 1.6, speedRandom: 0.12 }, shooterBias) {
   const n = serial * 4, shooter = profile.family === 'shooter';
   if (profile.angularModel === 'splatling-power') {
     // Per-axis community reconstruction: no shooter-like burst widening for Heavy.
-    return { yaw: biasedSigned(random01(seed, n), profile.yawBias) * profile.yaw * Math.PI / 180,
+    return { projection: 'world-yaw-pitch', yaw: biasedSigned(random01(seed, n), profile.yawBias) * profile.yaw * Math.PI / 180,
       pitch: biasedSigned(random01(seed, n + 1), profile.pitchBias) * profile.pitch * Math.PI / 180,
       speed: speedVariation(random01(seed, n + 3), profile) };
   }
@@ -25,6 +25,13 @@ function speedVariation(sample, profile) {
   return 1 + deviation * profile.speedRandom;
 }
 export function spreadDirection(forward, right, up, spread) {
+  if (spread.projection === 'world-yaw-pitch') {
+    // Heavy reconstruction uses horizontal azimuth and elevation, not a camera-local cone.
+    const yaw = Math.atan2(forward[0], -forward[2]) + spread.yaw;
+    const pitch = Math.atan2(forward[1], Math.hypot(forward[0], forward[2])) + spread.pitch;
+    const horizontal = Math.cos(pitch);
+    return [Math.sin(yaw) * horizontal, Math.sin(pitch), -Math.cos(yaw) * horizontal];
+  }
   const out = forward.map((v, i) => v + right[i] * Math.tan(spread.yaw) + up[i] * Math.tan(spread.pitch));
   const length = Math.hypot(...out); return out.map(v => v / length);
 }

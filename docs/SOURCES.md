@@ -141,3 +141,9 @@ Sendou's Heavy table matches the inspected Lean record's speed bias/rate .2/.12,
 
 [^heavy-original-video]: Primary community researcher つー / CCOPEDIA, [Splatling horizontal, vertical and launch-speed deviation](https://www.youtube.com/watch?v=vqCSszcA6bw), July 17, 2024, especially 1:09–2:59. Its linked [Desmos trajectory reconstruction](https://www.desmos.com/calculator/jdihiqoma6) was inspected as mathematics; no upstream program was copied.
 [^heavy-sendou]: [Sendou: Heavy Splatling parameters](https://sendou.ink/params/heavy-splatling), inspected October 19, 2026. Community display; “Data credit: Lean.”
+
+## Heavy spread direction projection — October 19, 2026
+
+The author reconstruction defines a fixed vertical axis, adds pitch deviation to launch elevation, and projects its 2D path through horizontal yaw.[^heavy-rng-author] Heavy now converts sampled offsets to world azimuth/elevation before constructing its unit direction. Other weapon paths retain their prior camera-local approximation.
+
+This fixes an internal mismatch: requesting 3.3° yaw with no pitch offset previously produced 4.662° horizontal yaw at 45° upward aim and 9.569° at 70°, also lowering elevation slightly. The new Heavy path preserves the requested yaw and elevation independently. These are analytic trainer checks, not console observations. It aligns this community model's angle definition; it does not verify Nintendo's muzzle aim, camera FOV, collision geometry or movement inheritance. Distribution sampling, charge mapping, speeds and braking/gravity are unchanged.
