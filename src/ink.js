@@ -1,5 +1,5 @@
-import { random01 } from './random.js?v=7c33641f3adbf0dc';
-import { advanceVelocity, damageAtAge } from './ballistics.js?v=7c33641f3adbf0dc';
+import { random01 } from './random.js?v=82edeb9a53d8c2e1';
+import { advanceVelocity, damageAtAge } from './ballistics.js?v=82edeb9a53d8c2e1';
 // Heavy uses community-reconstructed per-axis bias curves; other spread remains approximate. See SOURCES.md.
 export function shotSpread(seed, serial, burstShot = serial, profile = { yaw: 3.3, pitch: 1.6, speedRandom: 0.12 }, shooterBias) {
   const n = serial * 4, shooter = profile.family === 'shooter';

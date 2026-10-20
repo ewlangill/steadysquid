@@ -147,3 +147,14 @@ Sendou's Heavy table matches the inspected Lean record's speed bias/rate .2/.12,
 The author reconstruction defines a fixed vertical axis, adds pitch deviation to launch elevation, and projects its 2D path through horizontal yaw.[^heavy-rng-author] Heavy now converts sampled offsets to world azimuth/elevation before constructing its unit direction. Other weapon paths retain their prior camera-local approximation.
 
 This fixes an internal mismatch: requesting 3.3° yaw with no pitch offset previously produced 4.662° horizontal yaw at 45° upward aim and 9.569° at 70°, also lowering elevation slightly. The new Heavy path preserves the requested yaw and elevation independently. These are analytic trainer checks, not console observations. It aligns this community model's angle definition; it does not verify Nintendo's muzzle aim, camera FOV, collision geometry or movement inheritance. Distribution sampling, charge mapping, speeds and braking/gravity are unchanged.
+
+## Humanoid camera FOV reference — October 20, 2026
+
+Primary community researcher CCOPEDIA measured Splatoon 3's humanoid view using aligned scene lines and square-tile diagonals to recover perspective distance points. The December 27, 2024 worked example reports “垂直視野は…合わせて55度” (our translation: vertical FOV totals 55°), with horizontal FOV about 85.56° at 16:9.[^camera-measurement] The research wiki lists 55° humanoid / 60° squid vertical FOV, but is not treated as independent corroboration.[^camera-wiki]
+
+The static standing trainer camera now uses 55° vertical FOV instead of the original 65° guess. At 16:9 this gives 85.57° horizontally. It retains the canvas's actual aspect ratio on other window shapes; this does not force the game's 16:9 framing. Camera position, muzzle offset, near/far planes, angular input gain and projectile simulation are unchanged. Targets appear larger under the narrower perspective. New run identity preserves earlier history separately.
+
+This is a community image-based measurement reference, not inspected Nintendo camera parameters or our own console replication. Exact uncertainty, current-version equivalence, third-person camera offsets/obstruction, reticle-to-muzzle projection and scene scale remain unresolved. No player model or game asset is bundled. Squid/scope/throw FOV states are outside the current stationary trainer.
+
+[^camera-measurement]: Primary author つー / CCOPEDIA, [Measuring FOV from game screenshots](https://note.com/ccopedia/n/naa1fb5835020), December 27, 2024, Splatoon 3 worked example, inspected October 20, 2026. Community measurement with an inspectable geometric method; not an official specification.
+[^camera-wiki]: Community [Splatoon 3 mechanics: FOV](https://wikiwiki.jp/splatoon3mix/システム詳細仕様#q6f15816), inspected October 20, 2026. Shared lineage/independence not established.
