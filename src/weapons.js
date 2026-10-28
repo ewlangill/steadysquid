@@ -1,4 +1,6 @@
 export const WEAPONS = Object.freeze({
+  gal52: Object.freeze({ name: '.52 Gal', family: 'shooter', repeatFrames: 9, startupFrames: 3, projectileSpeed: 3.06, damage: 52, hits: 2, yaw: 6, pitch: 6, speedRandom: 0, biasMin: 0.02, biasStep: 0.03, biasRecovery: 0.015,
+    summary: 'Hold to fire. 9 f per shot · 52 max damage · two full-damage hits. Flight-time damage falls toward 30. Startup is a provisional 3 f; standing spread, braking and scene scale remain approximations.' }),
   splatcharger: Object.freeze({ name: 'Splat Charger', family: 'charger', fullChargeFrames: 60, minChargeFrames: 8, fullBurstFrames: 1, damage: 160, hits: 1, minProjectileSpeed: 2.4, maxProjectileSpeed: 4.8, yaw: 0, pitch: 0, speedRandom: 0,
     summary: 'Hold to charge; release one shot. 60 f full charge · 160 full damage · one-hit pop. Partial shots: 40–80 damage. Charge timing follows community documentation; charge scaling, recovery and scene range are previews. No swim charge storage.' }),
   mini: Object.freeze({ name: 'Mini Splatling', family: 'splatling', firstChargeFrames: 18, fullChargeFrames: 27, firstBurstFrames: 42, fullBurstFrames: 84, shotIntervalFrames: 4, minProjectileSpeed: 1.05, maxProjectileSpeed: 1.5, damage: 32, hits: 4, yaw: 4, pitch: 1.2, speedRandom: 0.1,
@@ -20,7 +22,7 @@ export function projectileSpeed(profile, charge = 0) {
 }
 export function routineHint(routine, weapon) {
   if (weapon.family === 'charger') return routine === 'acquire' ? 'Aim at the blue-outlined target for at least 0.2 seconds. Hold to charge and release a single shot. A full charge pops a target in one hit.' : 'Hold to charge, track a target, then release one shot. A full charge pops a target in one hit; partial charges need more hits.';
-  const hits = weapon.hits === 3 ? 'three' : 'four';
+  const hits = ({ 1: 'one', 2: 'two', 3: 'three', 4: 'four' })[weapon.hits] ?? String(weapon.hits);
   if (routine === 'chase') return `Follow the single target through short strafes and quick reversals. Spread sets left/right travel; speed sets pace. Land ${hits} full-damage hits to pop it. It returns shortly after each pop.`;
   if (routine === 'transfer') return `Targets stay in place. Land ${hits} hits to pop one, then aim at another target while firing.`;
   if (routine === 'reactive') return `Track targets as they move back and forth. Follow each change of direction. Each target takes ${hits} full-damage hits.`;

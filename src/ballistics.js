@@ -1,6 +1,7 @@
 // v11.3 weapon bounds/times; Heavy phase defaults follow labeled community research.
 // Other profiles retain the earlier approximation. See docs/SOURCES.md.
 const profiles = {
+  gal52: { straightFrames: 3, brakeSpeed: 1.667, minDamage: 30, reduceStart: 11, reduceEnd: 27, radius: 0.285, fieldRadius: 0.2 },
   heavy: { straightFrames: 8, brakeSpeed: 1.5105, minDamage: 15, reduceStart: 11, reduceEnd: 19 },
   mini: { straightFrames: 8, brakeSpeed: 1.105, minDamage: 16, reduceStart: 11, reduceEnd: 19 },
   splattershot: { straightFrames: 4, brakeSpeed: 1.493, minDamage: 18, reduceStart: 8, reduceEnd: 40 },
