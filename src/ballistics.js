@@ -9,6 +9,10 @@ const profiles = {
   splattershotpro: { straightFrames: 3, brakeSpeed: 2.2698, minDamage: 22.5, reduceStart: 7, reduceEnd: 23 },
 };
 export function projectileSpec(id, charge = 1) {
+  // MoveLength's engine meaning is unresolved; it does not modify this preview's flight.
+  if (id === 'rapid') return { straightFrames: 11, brakeSpeed: 1.13305, gravity: 0.016,
+    brakeDrag: 0.64, freeDrag: 0.98, freeSpeed: 0.12, radius: 0.235, fieldRadius: 0.2,
+    blast: { fuseFrames: 15, innerRadius: 1.01, outerRadius: 3.335, innerDamage: 35, outerDamage: 35, terrainScale: 0.4653 } };
   if (id === 'blaster') return { straightFrames: 9, brakeSpeed: 0.9131, gravity: 0.016,
     brakeDrag: 0.64, freeDrag: 0.98, freeSpeed: 0.12, radius: 0.285, fieldRadius: 0.2,
     blast: { fuseFrames: 13, innerRadius: 1.025, outerRadius: 3.385, innerDamage: 70, outerDamage: 50, terrainScale: 0.4234 } };
