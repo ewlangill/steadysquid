@@ -1,4 +1,6 @@
 export const WEAPONS = Object.freeze({
+  blaster: Object.freeze({ name: 'Blaster', family: 'blaster', repeatFrames: 50, startupFrames: 10, projectileSpeed: 0.945, damage: 125, hits: 1, yaw: 0, pitch: 0, speedRandom: 0,
+    summary: 'Hold to fire. 125 direct · 50–70 blast · 50 f per shot. 13 f fuse follows a community report. Startup, blast geometry, braking and scene scale are previews; standing only.' }),
   gal52: Object.freeze({ name: '.52 Gal', family: 'shooter', repeatFrames: 9, startupFrames: 3, projectileSpeed: 3.06, damage: 52, hits: 2, yaw: 6, pitch: 6, speedRandom: 0, biasMin: 0.02, biasStep: 0.03, biasRecovery: 0.015,
     summary: 'Hold to fire. 9 f per shot · 52 max damage · two full-damage hits. Flight-time damage falls toward 30. Startup is a provisional 3 f; standing spread, braking and scene scale remain approximations.' }),
   splatcharger: Object.freeze({ name: 'Splat Charger', family: 'charger', fullChargeFrames: 60, minChargeFrames: 8, fullBurstFrames: 1, damage: 160, hits: 1, minProjectileSpeed: 2.4, maxProjectileSpeed: 4.8, yaw: 0, pitch: 0, speedRandom: 0,
@@ -16,11 +18,12 @@ export const WEAPONS = Object.freeze({
 });
 // Scene-unit launch speed only; braking, gravity and spread remain trainer approximations.
 export function projectileSpeed(profile, charge = 0) {
-  if (profile.family === 'shooter') return profile.projectileSpeed;
+  if (['shooter', 'blaster'].includes(profile.family)) return profile.projectileSpeed;
   if (profile.family === 'charger') { const t = Math.max(0, Math.min(1, (charge * 60 - 8) / 52)); return 2.4 + 2.4 * t; }
   return profile.minProjectileSpeed + Math.min(1, Math.max(0, charge) * 2) * (profile.maxProjectileSpeed - profile.minProjectileSpeed);
 }
 export function routineHint(routine, weapon) {
+  if (weapon.family === 'blaster') return 'Hold to fire. One direct hit or two blasts pop a target. Aim beside a target to practice blast hits.';
   if (weapon.family === 'charger') return routine === 'acquire' ? 'Aim at the blue-outlined target for at least 0.2 seconds. Hold to charge and release a single shot. A full charge pops a target in one hit.' : 'Hold to charge, track a target, then release one shot. A full charge pops a target in one hit; partial charges need more hits.';
   const hits = ({ 1: 'one', 2: 'two', 3: 'three', 4: 'four' })[weapon.hits] ?? String(weapon.hits);
   if (routine === 'chase') return `Follow the single target through short strafes and quick reversals. Spread sets left/right travel; speed sets pace. Land ${hits} full-damage hits to pop it. It returns shortly after each pop.`;

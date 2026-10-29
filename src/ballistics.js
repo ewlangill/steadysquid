@@ -9,6 +9,9 @@ const profiles = {
   splattershotpro: { straightFrames: 3, brakeSpeed: 2.2698, minDamage: 22.5, reduceStart: 7, reduceEnd: 23 },
 };
 export function projectileSpec(id, charge = 1) {
+  if (id === 'blaster') return { straightFrames: 9, brakeSpeed: 0.9131, gravity: 0.016,
+    brakeDrag: 0.64, freeDrag: 0.98, freeSpeed: 0.12, radius: 0.285, fieldRadius: 0.2,
+    blast: { fuseFrames: 13, innerRadius: 1.025, outerRadius: 3.385, innerDamage: 70, outerDamage: 50, terrainScale: 0.4234 } };
   if (id === 'splatcharger') {
     const t = Math.max(0, Math.min(1, (charge * 60 - 8) / 52));
     return { straightFrames: Infinity, gravity: 0, brakeDrag: 1, freeDrag: 1, brakeSpeed: Infinity,
@@ -59,4 +62,11 @@ export function advanceVelocity(drop) {
   const drag = drop.freeFlight ? p.freeDrag : p.brakeDrag;
   drop.velocity = drop.velocity.map(v => v * drag);
   drop.velocity[1] -= p.gravity;
+}
+
+// Original preview: distance to target sphere surface; exact game overlap semantics unverified.
+export function blastDamage(distance, blast, scale = 1) {
+  if (!Number.isFinite(distance) || distance < 0 || distance > blast.outerRadius * scale) return 0;
+  const t = Math.max(0, (distance / scale - blast.innerRadius) / (blast.outerRadius - blast.innerRadius));
+  return Math.round((blast.innerDamage + (blast.outerDamage - blast.innerDamage) * t) * 10) / 10;
 }

@@ -1,5 +1,5 @@
-import { random01 } from './random.js?v=b0ec9812c6141777';
-import { advanceVelocity, damageAtAge } from './ballistics.js?v=b0ec9812c6141777';
+import { random01 } from './random.js?v=ad941513ac4a6b90';
+import { advanceVelocity, damageAtAge, blastDamage } from './ballistics.js?v=ad941513ac4a6b90';
 // Heavy uses community-reconstructed per-axis bias curves; other spread remains approximate. See SOURCES.md.
 export function shotSpread(seed, serial, burstShot = serial, profile = { yaw: 3.3, pitch: 1.6, speedRandom: 0.12 }, shooterBias) {
   const n = serial * 4, shooter = profile.family === 'shooter';
@@ -50,6 +50,18 @@ export class InkCloud {
     if (this.drops.length >= this.limit) this.drops.shift();
     this.drops.push({ id: this.serial++, position: [...origin], previous: [...origin], velocity: direction.map(v => v * speed), age: 0, damage, spec, distance: 0, hitTargets: new Set() });
   }
+  explode(drop, point, targets, radius, impacts, terrain = false) {
+    const blast = drop.spec.blast, scale = terrain ? blast.terrainScale : 1;
+    targets.forEach((target, index) => {
+      // The practice world has a floor and a solid back wall. No other cover is modeled.
+      if (!target.alive || drop.hitTargets.has(index) || target.position[1] < 0 || target.position[2] < -15) return;
+      const distance = Math.max(0, Math.hypot(...point.map((v, i) => v - target.position[i])) - radius);
+      const damage = blastDamage(distance, blast, scale);
+      if (damage) { drop.hitTargets.add(index); impacts.push({ index, point: [...point], id: drop.id, damage, kind: 'blast' }); }
+    });
+    this.splashes.push({ point: [...point], normal: [0, 0, 1], age: 0, life: 12, id: drop.id, blastRadius: blast.outerRadius * scale });
+    if (this.splashes.length > 96) this.splashes.shift();
+  }
   step(targets, radius) {
     const impacts = [], survivors = [];
     this.splashes = this.splashes.filter(s => ++s.age < s.life);
@@ -78,9 +90,13 @@ export class InkCloud {
         if (this.splashes.length > 96) this.splashes.shift();
         impacts.push({ index: best.index, point: contact, id: drop.id, damage: damageAtAge(drop.damage, drop.age - 1 + best.t * fraction, drop.spec) });
         if (best.index >= 0) drop.hitTargets.add(best.index);
+        if (drop.spec?.blast) this.explode(drop, point, targets, radius, impacts, best.index < 0);
         if (best.index < 0 || !drop.spec?.pierce) { stopped = true; break; }
       }
       if (stopped) continue;
+      if (drop.spec?.blast && drop.age >= drop.spec.blast.fuseFrames) {
+        this.explode(drop, b, targets, radius, impacts); continue;
+      }
       drop.position = b;
       drop.distance += stepLength * fraction;
       if (drop.spec) advanceVelocity(drop);

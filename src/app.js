@@ -1,17 +1,17 @@
-import { createLocalStore, cleanSettings, MODEL_VERSION } from './storage.js?v=b0ec9812c6141777';
-import { WEAPONS, routineHint, projectileSpeed } from './weapons.js?v=b0ec9812c6141777';
-import { projectileSpec } from './ballistics.js?v=b0ec9812c6141777';
-import { aimDelta, InputCheck } from './aim.js?v=b0ec9812c6141777';
-import { InkCloud, shotSpread, spreadDirection, ShooterSpread } from './ink.js?v=b0ec9812c6141777';
-import { generateLayout, targetPosition } from './layout.js?v=b0ec9812c6141777';
-import { createChasePath, chasePosition, targetEnabled } from './chase.js?v=b0ec9812c6141777';
-import { freshSeed } from './random.js?v=b0ec9812c6141777';
-import { TargetField } from './targets.js?v=b0ec9812c6141777';
-import { ROUTINES, drillTarget, Acquisition, targetCue } from './drills.js?v=b0ec9812c6141777';
-import { ProGCC, MotionInput, controllerSessionAction } from './progcc.js?v=b0ec9812c6141777';
-import { SwitchPro } from './switchpro.js?v=b0ec9812c6141777';
-import { BrowserGamepad } from './gamepad.js?v=b0ec9812c6141777';
-import { Session, summarizeFrames } from './engine.js?v=b0ec9812c6141777';
+import { createLocalStore, cleanSettings, MODEL_VERSION } from './storage.js?v=ad941513ac4a6b90';
+import { WEAPONS, routineHint, projectileSpeed } from './weapons.js?v=ad941513ac4a6b90';
+import { projectileSpec } from './ballistics.js?v=ad941513ac4a6b90';
+import { aimDelta, InputCheck } from './aim.js?v=ad941513ac4a6b90';
+import { InkCloud, shotSpread, spreadDirection, ShooterSpread } from './ink.js?v=ad941513ac4a6b90';
+import { generateLayout, targetPosition } from './layout.js?v=ad941513ac4a6b90';
+import { createChasePath, chasePosition, targetEnabled } from './chase.js?v=ad941513ac4a6b90';
+import { freshSeed } from './random.js?v=ad941513ac4a6b90';
+import { TargetField } from './targets.js?v=ad941513ac4a6b90';
+import { ROUTINES, drillTarget, Acquisition, targetCue } from './drills.js?v=ad941513ac4a6b90';
+import { ProGCC, MotionInput, controllerSessionAction } from './progcc.js?v=ad941513ac4a6b90';
+import { SwitchPro } from './switchpro.js?v=ad941513ac4a6b90';
+import { BrowserGamepad } from './gamepad.js?v=ad941513ac4a6b90';
+import { Session, summarizeFrames } from './engine.js?v=ad941513ac4a6b90';
 const $ = id => document.getElementById(id);
 const session = new Session();
 let controllerKind = 'progcc', usb;
@@ -202,7 +202,7 @@ function syncUI() {
   $('session-status').textContent = session.state.toUpperCase(); $('pause').textContent = session.state === 'paused' ? 'Resume' : 'Pause';
   $('pause').disabled = !['running', 'paused'].includes(session.state);
   const weapon = session.weapon, firing = weapon.phase === 'firing';
-  const shooter = weaponProfile.family === 'shooter';
+  const shooter = ['shooter', 'blaster'].includes(weaponProfile.family);
   const amount = shooter ? Number(firing) : firing ? weapon.remaining / (weaponProfile.fullBurstFrames / 60) : weapon.charge;
   $('phase').textContent = firing ? (shooter ? 'FIRING' : 'DISCHARGING') : weapon.phase === 'charging' ? 'CHARGING' : session.state === 'paused' ? 'PAUSED' : session.state === 'complete' ? 'SESSION COMPLETE' : 'STANDBY';
   $('charge-fill').style.width = Math.min(100, amount * 100) + '%'; $('charge-fill').classList.toggle('firing', firing);
@@ -214,7 +214,7 @@ function syncUI() {
   $('keyboard-action').textContent = shooter ? 'hold to fire' : 'charge / release';
   canvas.setAttribute('aria-label', shooter ? 'Practice range. Arrow keys aim; hold Space to fire.' : 'Practice range. Arrow keys aim; hold Space to charge and release to fire.');
   $('controller-controls').textContent = weaponProfile.family === 'charger' ? 'ZR charge / release one shot · Y recenter · Plus start / pause / resume.' : shooter ? 'Hold ZR to fire · Y recenter · Plus start / pause / resume.' : 'ZR charge / release · hold ZR during a burst to queue the next charge · Y recenter · Plus start / pause / resume.';
-  $('scoring-note').textContent = weaponProfile.family === 'charger' ? 'Shots landed counts impacts. Full-charge shots can hit more than one target. Charging is excluded from firing time.' : shooter ? 'Tracking while firing measures time the fire control is held, including startup. Shots landed counts projectile impacts.' : 'Charging time counts toward tracking, but is excluded from tracking while firing.';
+  $('scoring-note').textContent = weaponProfile.family === 'blaster' ? 'Hits counts target impacts; one blast can hit several targets. Startup counts as firing time.' : weaponProfile.family === 'charger' ? 'Shots landed counts impacts. Full-charge shots can hit more than one target. Charging is excluded from firing time.' : shooter ? 'Tracking while firing measures time the fire control is held, including startup. Shots landed counts projectile impacts.' : 'Charging time counts toward tracking, but is excluded from tracking while firing.';
   $('charge-hint').textContent = shooter ? (usb.device ? 'HOLD ZR TO FIRE · RELEASE TO STOP' : 'HOLD SPACE OR LEFT MOUSE TO FIRE') : firing ? 'KEEP AIMING WHILE FIRING' : weapon.phase === 'charging' ? 'RELEASE TO FIRE' : session.state === 'complete' ? 'RESTART TO TRY AGAIN' : usb.device ? 'HOLD ZR TO CHARGE · RELEASE TO FIRE' : 'HOLD SPACE OR LEFT MOUSE TO CHARGE';
   if (session.state === 'complete' && !runSaved) {
     runSaved = true;
@@ -239,7 +239,7 @@ function drawChargeRing() {
   const amount = firing ? weapon.remaining / (weaponProfile.fullBurstFrames / 60) : weapon.charge;
   const charger = weaponProfile.family === 'charger';
   $('charge-reticle').classList.toggle('charger', charger);
-  const visible = weaponProfile.family !== 'shooter' && session.state === 'running' && ['charging', 'firing'].includes(weapon.phase);
+  const visible = !['shooter', 'blaster'].includes(weaponProfile.family) && session.state === 'running' && ['charging', 'firing'].includes(weapon.phase);
   $('charge-reticle').hidden = !visible;
   if (!visible) return;
   $('charge-inner').style.strokeDashoffset = 100 * (1 - Math.min(1, amount * (charger ? 1 : 2)));
@@ -277,7 +277,7 @@ function drawInk() {
   ink.splashes.forEach((splash, i) => {
     inkUp.fromArray(splash.normal); particle.position.fromArray(splash.point).addScaledVector(inkUp, 0.015); particle.quaternion.setFromUnitVectors(particleForward, inkUp);
     const fade = splash.life < 20 ? 1 - splash.age / splash.life : Math.min(1, (splash.life - splash.age) / 24);
-    particle.scale.setScalar((splash.life < 20 ? 0.16 : 0.24) * fade); particle.updateMatrix(); splashMesh.setMatrixAt(i, particle.matrix);
+    particle.scale.setScalar((splash.blastRadius ?? (splash.life < 20 ? 0.16 : 0.24)) * fade); particle.updateMatrix(); splashMesh.setMatrixAt(i, particle.matrix);
   });
   splashMesh.count = ink.splashes.length; splashMesh.instanceMatrix.needsUpdate = true;
 }
