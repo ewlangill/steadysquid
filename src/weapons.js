@@ -1,4 +1,7 @@
 export const WEAPONS = Object.freeze({
+  eliter4k: Object.freeze({ name: 'E-liter 4K', family: 'charger', fullChargeFrames: 92, minChargeFrames: 8, fullBurstFrames: 1, damage: 180, hits: 1, minProjectileSpeed: 2.4, maxProjectileSpeed: 6.4, fullProjectileSpeed: 9.6, yaw: 0, pitch: 0, speedRandom: 0,
+    charger: Object.freeze({ minDamage: 40, maxPartialDamage: 80, minRange: 9.045, maxRange: 29.05, radius: 0.1125, fieldRadius: 0.02 }),
+    summary: 'Hold to charge; release one shot. 92 f full charge · 180 full / 40–80 partial damage. Standing preview: 8 f minimum, charge scaling, recovery, collision and scene range remain qualified. No swim charge storage.' }),
   luna: Object.freeze({ name: 'Luna Blaster', family: 'blaster', repeatFrames: 40, startupFrames: 10, projectileSpeed: 0.87, damage: 125, hits: 1, yaw: 0, pitch: 0, speedRandom: 0,
     summary: '125 direct · 50–70 blast · 40 f per shot · 11 f fuse. Standing preview: startup, blast geometry, braking and scene scale remain approximate.' }),
   rapid: Object.freeze({ name: 'Rapid Blaster', family: 'blaster', repeatFrames: 35, startupFrames: 8, projectileSpeed: 1.2, damage: 85, hits: 2, yaw: 0, pitch: 0, speedRandom: 0,
@@ -8,7 +11,8 @@ export const WEAPONS = Object.freeze({
     summary: 'Hold to fire. 125 direct · 50–70 blast · 50 f per shot. 13 f fuse follows a community report. Startup, blast geometry, braking and scene scale are previews; standing only.' }),
   gal52: Object.freeze({ name: '.52 Gal', family: 'shooter', repeatFrames: 9, startupFrames: 3, projectileSpeed: 3.06, damage: 52, hits: 2, yaw: 6, pitch: 6, speedRandom: 0, biasMin: 0.02, biasStep: 0.03, biasRecovery: 0.015,
     summary: 'Hold to fire. 9 f per shot · 52 max damage · two full-damage hits. Flight-time damage falls toward 30. Startup is a provisional 3 f; standing spread, braking and scene scale remain approximations.' }),
-  splatcharger: Object.freeze({ name: 'Splat Charger', family: 'charger', fullChargeFrames: 60, minChargeFrames: 8, fullBurstFrames: 1, damage: 160, hits: 1, minProjectileSpeed: 2.4, maxProjectileSpeed: 4.8, yaw: 0, pitch: 0, speedRandom: 0,
+  splatcharger: Object.freeze({ name: 'Splat Charger', family: 'charger', fullChargeFrames: 60, minChargeFrames: 8, fullBurstFrames: 1, damage: 160, hits: 1, minProjectileSpeed: 2.4, maxProjectileSpeed: 4.8, fullProjectileSpeed: 4.8, yaw: 0, pitch: 0, speedRandom: 0,
+    charger: Object.freeze({ minDamage: 40, maxPartialDamage: 80, minRange: 9.033, maxRange: 24.037, radius: 0.125 }),
     summary: 'Hold to charge; release one shot. 60 f full charge · 160 full damage · one-hit pop. Partial shots: 40–80 damage. Charge timing follows community documentation; charge scaling, recovery and scene range are previews. No swim charge storage.' }),
   mini: Object.freeze({ name: 'Mini Splatling', family: 'splatling', firstChargeFrames: 18, fullChargeFrames: 27, firstBurstFrames: 42, fullBurstFrames: 84, shotIntervalFrames: 4, minProjectileSpeed: 1.05, maxProjectileSpeed: 1.5, damage: 32, hits: 4, yaw: 4, pitch: 1.2, speedRandom: 0.1,
     summary: '18 / 27 f charge · 42 / 84 f burst · 4 f per shot. 32 max damage · four full-damage hits. Flight-time damage falloff is modeled. Spread and trajectory remain approximate.' }),
@@ -21,10 +25,14 @@ export const WEAPONS = Object.freeze({
   splattershot: Object.freeze({ name: 'Splattershot', family: 'shooter', biasMin: 0.01, biasStep: 0.01, biasRecovery: 0.015, repeatFrames: 6, startupFrames: 3, projectileSpeed: 2.266, damage: 36, hits: 3, yaw: 4.86, pitch: 4.86, speedRandom: 0,
     summary: 'Hold to fire. 36 max damage · three full-damage hits per target. Provisional timing: 6 f per shot, 3 f startup. Centered opening spread, sustained-fire widening and recovery are approximate; Flight-time damage falloff is modeled; drop and spread remain approximate.' }),
 });
+// Linear charge scaling is a preview; preserve each preset's own timing/endpoints.
+export function chargerFraction(profile, charge) {
+  return Math.max(0, Math.min(1, (charge * profile.fullChargeFrames - profile.minChargeFrames) / (profile.fullChargeFrames - profile.minChargeFrames)));
+}
 // Scene-unit launch speed only; braking, gravity and spread remain trainer approximations.
 export function projectileSpeed(profile, charge = 0) {
   if (['shooter', 'blaster'].includes(profile.family)) return profile.projectileSpeed;
-  if (profile.family === 'charger') { const t = Math.max(0, Math.min(1, (charge * 60 - 8) / 52)); return 2.4 + 2.4 * t; }
+  if (profile.family === 'charger') return charge >= 1 ? profile.fullProjectileSpeed : profile.minProjectileSpeed + (profile.maxProjectileSpeed - profile.minProjectileSpeed) * chargerFraction(profile, charge);
   return profile.minProjectileSpeed + Math.min(1, Math.max(0, charge) * 2) * (profile.maxProjectileSpeed - profile.minProjectileSpeed);
 }
 export function routineHint(routine, weapon) {

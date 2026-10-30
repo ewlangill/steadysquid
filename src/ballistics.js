@@ -1,3 +1,4 @@
+import { WEAPONS, chargerFraction } from './weapons.js?v=a447e477ec02e2aa';
 // v11.3 weapon bounds/times; Heavy phase defaults follow labeled community research.
 // Other profiles retain the earlier approximation. See docs/SOURCES.md.
 const profiles = {
@@ -19,11 +20,13 @@ export function projectileSpec(id, charge = 1) {
   if (id === 'blaster') return { straightFrames: 9, brakeSpeed: 0.9131, gravity: 0.016,
     brakeDrag: 0.64, freeDrag: 0.98, freeSpeed: 0.12, radius: 0.285, fieldRadius: 0.2,
     blast: { fuseFrames: 13, innerRadius: 1.025, outerRadius: 3.385, innerDamage: 70, outerDamage: 50, terrainScale: 0.4234 } };
-  if (id === 'splatcharger') {
-    const t = Math.max(0, Math.min(1, (charge * 60 - 8) / 52));
+  const profile = WEAPONS[id];
+  if (profile?.family === 'charger') {
+    const t = chargerFraction(profile, charge), p = profile.charger;
     return { straightFrames: Infinity, gravity: 0, brakeDrag: 1, freeDrag: 1, brakeSpeed: Infinity,
-      maxDistance: 9.033 + t * (24.037 - 9.033), pierce: charge >= 1, radius: 0.125, charger: true,
-      damage: charge >= 1 ? 160 : 40 + t * 40 };
+      maxDistance: p.minRange + t * (p.maxRange - p.minRange), pierce: charge >= 1, radius: p.radius, charger: true,
+      ...(p.fieldRadius === undefined ? {} : { fieldRadius: p.fieldRadius }),
+      damage: charge >= 1 ? profile.damage : p.minDamage + t * (p.maxPartialDamage - p.minDamage) };
   }
   if (id === 'heavy') return { ...profiles.heavy, radius: 0.225, fieldRadius: 0.2,
     brakeGravity: 0.07, freeGravity: 0.016, brakeDrag: 0.64, freeDrag: 0.98,
