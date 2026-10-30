@@ -1,17 +1,18 @@
-import { createLocalStore, cleanSettings, MODEL_VERSION } from './storage.js?v=0bd353c37827667f';
-import { WEAPONS, routineHint, projectileSpeed } from './weapons.js?v=0bd353c37827667f';
-import { projectileSpec } from './ballistics.js?v=0bd353c37827667f';
-import { aimDelta, InputCheck } from './aim.js?v=0bd353c37827667f';
-import { InkCloud, shotSpread, spreadDirection, ShooterSpread } from './ink.js?v=0bd353c37827667f';
-import { generateLayout, targetPosition } from './layout.js?v=0bd353c37827667f';
-import { createChasePath, chasePosition, targetEnabled } from './chase.js?v=0bd353c37827667f';
-import { freshSeed } from './random.js?v=0bd353c37827667f';
-import { TargetField } from './targets.js?v=0bd353c37827667f';
-import { ROUTINES, drillTarget, Acquisition, targetCue } from './drills.js?v=0bd353c37827667f';
-import { ProGCC, MotionInput, controllerSessionAction } from './progcc.js?v=0bd353c37827667f';
-import { SwitchPro } from './switchpro.js?v=0bd353c37827667f';
-import { BrowserGamepad } from './gamepad.js?v=0bd353c37827667f';
-import { Session, summarizeFrames } from './engine.js?v=0bd353c37827667f';
+import { blastVisual } from './ink-visuals.js?v=e5e46ca3981973d8';
+import { createLocalStore, cleanSettings, MODEL_VERSION } from './storage.js?v=e5e46ca3981973d8';
+import { WEAPONS, routineHint, projectileSpeed } from './weapons.js?v=e5e46ca3981973d8';
+import { projectileSpec } from './ballistics.js?v=e5e46ca3981973d8';
+import { aimDelta, InputCheck } from './aim.js?v=e5e46ca3981973d8';
+import { InkCloud, shotSpread, spreadDirection, ShooterSpread } from './ink.js?v=e5e46ca3981973d8';
+import { generateLayout, targetPosition } from './layout.js?v=e5e46ca3981973d8';
+import { createChasePath, chasePosition, targetEnabled } from './chase.js?v=e5e46ca3981973d8';
+import { freshSeed } from './random.js?v=e5e46ca3981973d8';
+import { TargetField } from './targets.js?v=e5e46ca3981973d8';
+import { ROUTINES, drillTarget, Acquisition, targetCue } from './drills.js?v=e5e46ca3981973d8';
+import { ProGCC, MotionInput, controllerSessionAction } from './progcc.js?v=e5e46ca3981973d8';
+import { SwitchPro } from './switchpro.js?v=e5e46ca3981973d8';
+import { BrowserGamepad } from './gamepad.js?v=e5e46ca3981973d8';
+import { Session, summarizeFrames } from './engine.js?v=e5e46ca3981973d8';
 const $ = id => document.getElementById(id);
 const session = new Session();
 let controllerKind = 'progcc', usb;
@@ -25,7 +26,7 @@ let radius = 0.32, routine = 'smooth', seed = 1, arcDegrees = 120;
 const acquisition = new Acquisition(), field = new TargetField(5), targetMeshes = [], THREE = window.THREE;
 let simulationFrame = 0, simulationRemainder = 0, shotSerial = 0, burstShot = 0;
 const ink = new InkCloud(), shooterSpread = new ShooterSpread(), inputCheck = new InputCheck();
-let layout = generateLayout(seed, field.count, radius, arcDegrees), chasePath = createChasePath(seed, arcDegrees), inkMesh, splashMesh;
+let layout = generateLayout(seed, field.count, radius, arcDegrees), chasePath = createChasePath(seed, arcDegrees), inkMesh, splashMesh, blastMesh, blastRingMesh;
 function showError(message) { $('error').hidden = false; $('error').textContent = message; $('start').disabled = true; }
 try {
   if (!THREE) throw new Error('The 3D library could not load. Please reload the page.');
@@ -63,6 +64,10 @@ try {
   for (let i = 0; i <= 40; i++) { const angle = i / 40 * Math.PI * 2, r = 0.8 + 0.14 * Math.sin(angle * 5) + 0.06 * Math.sin(angle * 9); const x = Math.cos(angle) * r, y = Math.sin(angle) * r; if (!i) blob.moveTo(x, y); else blob.lineTo(x, y); }
   splashMesh = new THREE.InstancedMesh(new THREE.ShapeGeometry(blob), new THREE.MeshBasicMaterial({ color: 0x90a1cf, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false }), 96);
   splashMesh.count = 0; splashMesh.frustumCulled = false; splashMesh.renderOrder = 2; scene.add(splashMesh);
+  blastMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshBasicMaterial({ color: 0x90a1cf, transparent: true, opacity: 0.7, depthWrite: false }), 96 * 8);
+  blastRingMesh = new THREE.InstancedMesh(new THREE.RingGeometry(0.955, 1, 40), new THREE.MeshBasicMaterial({ color: 0x90a1cf, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false }), 96);
+  for (const mesh of [blastMesh, blastRingMesh]) { mesh.count = 0; mesh.frustumCulled = false; scene.add(mesh); }
+
 } catch (error) { showError(error.message); }
 function updateAim() { if (camera) { camera.rotation.y = yaw; camera.rotation.x = pitch; } }
 function center() { yaw = pitch = 0; updateAim(); }
@@ -250,6 +255,7 @@ function drawChargeRing() {
 }
 const aimDirection = THREE ? new THREE.Vector3() : null, targetDirection = THREE ? new THREE.Vector3() : null;
 function resetInkAndLayout() { ink.reset(); shooterSpread.reset(); shotSerial = burstShot = 0; layout = generateLayout(seed, field.count, radius, arcDegrees); chasePath = createChasePath(seed, arcDegrees); }
+const blastColor = THREE ? new THREE.Color() : null;
 const particle = THREE ? new THREE.Object3D() : null, particleForward = THREE ? new THREE.Vector3(0, 0, 1) : null;
 const inkForward = THREE ? new THREE.Vector3() : null, inkRight = THREE ? new THREE.Vector3() : null, inkUp = THREE ? new THREE.Vector3() : null;
 function emitInk() {
@@ -270,16 +276,37 @@ function drawInk() {
     for (let trail = 0; trail < 3; trail++) {
       const f = 1 - trail * 0.22;
       particle.position.fromArray(drop.previous).lerp(inkRight.fromArray(drop.position), f);
-      particle.scale.set(0.06 - trail * 0.012, 0.05 - trail * 0.01, drop.spec?.charger ? 0.9 - trail * 0.15 : 0.19 - trail * 0.04); particle.updateMatrix(); inkMesh.setMatrixAt(count++, particle.matrix);
+      const blaster = Boolean(drop.spec?.blast);
+      particle.scale.set(blaster ? 0.095 - trail * 0.025 : 0.06 - trail * 0.012, blaster ? 0.095 - trail * 0.025 : 0.05 - trail * 0.01, drop.spec?.charger ? 0.9 - trail * 0.15 : blaster ? 0.13 - trail * 0.035 : 0.19 - trail * 0.04); particle.updateMatrix(); inkMesh.setMatrixAt(count++, particle.matrix);
     }
   }
   inkMesh.count = count; inkMesh.instanceMatrix.needsUpdate = true;
-  ink.splashes.forEach((splash, i) => {
+  let paintCount = 0, blastCount = 0, beadCount = 0;
+  for (const splash of ink.splashes) {
+    if (Number.isFinite(splash.blastRadius)) {
+      inkUp.fromArray(splash.point);
+      const visual = blastVisual(splash.age, splash.life, inkUp.distanceTo(camera.position));
+      if (!visual) continue;
+      // An open, camera-facing ring and eight small 3D droplets replace the solid damage-sized disc.
+      particle.position.copy(inkUp); particle.quaternion.copy(camera.quaternion);
+      particle.scale.setScalar(visual.radius); particle.updateMatrix(); blastRingMesh.setMatrixAt(blastCount, particle.matrix);
+      blastRingMesh.setColorAt(blastCount++, blastColor.setScalar(visual.opacity));
+      for (let i = 0; i < 8; i++) {
+        const z = 1 - 2 * (i + 0.5) / 8, angle = i * 2.39996323 + visual.rotation;
+        const radial = Math.sqrt(1 - z * z) * visual.radius;
+        particle.position.set(splash.point[0] + Math.cos(angle) * radial, splash.point[1] + Math.sin(angle) * radial, splash.point[2] + z * visual.radius);
+        particle.scale.setScalar(visual.bead); particle.updateMatrix(); blastMesh.setMatrixAt(beadCount++, particle.matrix);
+      }
+      continue;
+    }
     inkUp.fromArray(splash.normal); particle.position.fromArray(splash.point).addScaledVector(inkUp, 0.015); particle.quaternion.setFromUnitVectors(particleForward, inkUp);
     const fade = splash.life < 20 ? 1 - splash.age / splash.life : Math.min(1, (splash.life - splash.age) / 24);
-    particle.scale.setScalar((splash.blastRadius ?? (splash.life < 20 ? 0.16 : 0.24)) * fade); particle.updateMatrix(); splashMesh.setMatrixAt(i, particle.matrix);
-  });
-  splashMesh.count = ink.splashes.length; splashMesh.instanceMatrix.needsUpdate = true;
+    particle.scale.setScalar((splash.life < 20 ? 0.16 : 0.24) * fade); particle.updateMatrix(); splashMesh.setMatrixAt(paintCount++, particle.matrix);
+  }
+  splashMesh.count = paintCount; splashMesh.instanceMatrix.needsUpdate = true;
+  blastMesh.count = beadCount; blastMesh.instanceMatrix.needsUpdate = true;
+  blastRingMesh.count = blastCount; blastRingMesh.instanceMatrix.needsUpdate = true;
+  if (blastRingMesh.instanceColor) blastRingMesh.instanceColor.needsUpdate = true;
 }
 const projected = THREE ? new THREE.Vector3() : null;
 function activeTarget() {
@@ -315,7 +342,7 @@ function placeTargets() {
     projected.copy(item.mesh.position); projected.y += radius + 0.18; projected.project(camera);
     item.label.hidden = session.state === 'ready' || !alive || projected.z < -1 || projected.z > 1 || Math.abs(projected.x) > 1 || Math.abs(projected.y) > 1;
     item.label.style.left = (projected.x + 1) / 2 * 100 + '%'; item.label.style.top = (1 - projected.y) / 2 * 100 + '%';
-    item.label.textContent = state.hp + ' HP';
+    item.label.textContent = Math.round(state.hp * 10) / 10 + ' HP';
   });
 }
 function pickTarget() {

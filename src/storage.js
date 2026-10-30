@@ -1,4 +1,4 @@
-import { WEAPONS } from './weapons.js?v=0bd353c37827667f';
+import { WEAPONS } from './weapons.js?v=e5e46ca3981973d8';
 export const MODEL_VERSION = '2026-10-20-camera-12';
 const SETTINGS_KEY = 'steadysquid.settings.v1', HISTORY_KEY = 'steadysquid.history.v1';
 export const HISTORY_LIMIT = 50;
