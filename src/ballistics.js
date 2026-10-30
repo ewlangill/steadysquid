@@ -9,6 +9,9 @@ const profiles = {
   splattershotpro: { straightFrames: 3, brakeSpeed: 2.2698, minDamage: 22.5, reduceStart: 7, reduceEnd: 23 },
 };
 export function projectileSpec(id, charge = 1) {
+  if (id === 'luna') return { straightFrames: 7, brakeSpeed: 0.8484, gravity: 0.016,
+    brakeDrag: 0.64, freeDrag: 0.98, freeSpeed: 0.12, radius: 0.3, fieldRadius: 0.2,
+    blast: { fuseFrames: 11, innerRadius: 1.7, outerRadius: 3.9, innerDamage: 70, outerDamage: 50, terrainScale: 0.4166 } };
   // MoveLength's engine meaning is unresolved; it does not modify this preview's flight.
   if (id === 'rapid') return { straightFrames: 11, brakeSpeed: 1.13305, gravity: 0.016,
     brakeDrag: 0.64, freeDrag: 0.98, freeSpeed: 0.12, radius: 0.235, fieldRadius: 0.2,

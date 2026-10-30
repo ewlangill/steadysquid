@@ -1,4 +1,6 @@
 export const WEAPONS = Object.freeze({
+  luna: Object.freeze({ name: 'Luna Blaster', family: 'blaster', repeatFrames: 40, startupFrames: 10, projectileSpeed: 0.87, damage: 125, hits: 1, yaw: 0, pitch: 0, speedRandom: 0,
+    summary: '125 direct · 50–70 blast · 40 f per shot · 11 f fuse. Standing preview: startup, blast geometry, braking and scene scale remain approximate.' }),
   rapid: Object.freeze({ name: 'Rapid Blaster', family: 'blaster', repeatFrames: 35, startupFrames: 8, projectileSpeed: 1.2, damage: 85, hits: 2, yaw: 0, pitch: 0, speedRandom: 0,
     hint: 'Hold to fire. Two direct hits, three blasts, or one of each pop a target. Aim beside a target to practice blasts.',
     summary: '85 direct · 35 blast · 35 f per shot · 15 f fuse. Standing preview: startup, blast geometry, flight and scale are approximate; MoveLength is not mapped.' }),
