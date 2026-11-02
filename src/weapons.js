@@ -1,4 +1,7 @@
 export const WEAPONS = Object.freeze({
+  squiffer: Object.freeze({ name: 'Classic Squiffer', family: 'charger', fullChargeFrames: 45, minChargeFrames: 8, fullBurstFrames: 1, damage: 140, hits: 1, minProjectileSpeed: 2.4, maxProjectileSpeed: 3.6, fullProjectileSpeed: 3.6, yaw: 0, pitch: 0, speedRandom: 0,
+    charger: Object.freeze({ minDamage: 40, maxPartialDamage: 80, minRange: 9.261, maxRange: 16.765, radius: 0.1375, fieldRadius: 0.02 }),
+    summary: 'Hold to charge; release one shot. 45 f full charge · 140 full / 40–80 partial damage. Standing preview: 8 f minimum; charge scaling, recovery, collision and muzzle/scene range remain approximate. No swim charge storage or movement.' }),
   eliter4k: Object.freeze({ name: 'E-liter 4K', family: 'charger', fullChargeFrames: 92, minChargeFrames: 8, fullBurstFrames: 1, damage: 180, hits: 1, minProjectileSpeed: 2.4, maxProjectileSpeed: 6.4, fullProjectileSpeed: 9.6, yaw: 0, pitch: 0, speedRandom: 0,
     charger: Object.freeze({ minDamage: 40, maxPartialDamage: 80, minRange: 9.045, maxRange: 29.05, radius: 0.1125, fieldRadius: 0.02 }),
     summary: 'Hold to charge; release one shot. 92 f full charge · 180 full / 40–80 partial damage. Standing preview: 8 f minimum, charge scaling, recovery, collision and scene range remain qualified. No swim charge storage.' }),

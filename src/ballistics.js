@@ -1,4 +1,4 @@
-import { WEAPONS, chargerFraction } from './weapons.js?v=a447e477ec02e2aa';
+import { WEAPONS, chargerFraction } from './weapons.js?v=1228e69356aca8d7';
 // v11.3 weapon bounds/times; Heavy phase defaults follow labeled community research.
 // Other profiles retain the earlier approximation. See docs/SOURCES.md.
 const profiles = {
